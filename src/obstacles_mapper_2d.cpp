@@ -142,7 +142,7 @@ void obstacles_mapper_2d::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& 
     /**
     * PCL Viewer
     *
-    **
+    *
     *viewer_filtered->removeAllPointClouds();
     *viewer_filtered->addPointCloud<pcl::PointXYZ> (cloud_voxelized, "Filtered" );
     *viewer_filtered->spinOnce();
@@ -155,29 +155,4 @@ void obstacles_mapper_2d::init()
     pub_ = nh_.advertise<std_msgs::Float64MultiArray>("/camera/obstacles2D", 1);
 
     sub_ = nh_.subscribe<sensor_msgs::PointCloud2>("camera/depth/points", 1, &obstacles_mapper_2d::pclCallback, this);
-}
-
-int main(int argc, char** argv)
-{
-
-    ros::init(argc, argv, "obstacles_mapper_2d");
-
-    ros::NodeHandle nh;
-
-    obstacles_mapper_2d obstacles_mapper_2d(nh);
-
-    /*
-     * Modify resolution parameters
-     * Unit = milimeters;
-     */
-
-    obstacles_mapper_2d.cell_dimension_mm = 10;
-    //obstacles_mapper_2d.desired_depth_mm = 6000;
-    //obstacles_mapper_2d.desired_width_mm = 10000;
-    obstacles_mapper_2d.init();
-
-    ros::spin();
-
-    return 0;
-
 }

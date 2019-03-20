@@ -33,14 +33,27 @@ public:
     apf_motion_planner(ros::NodeHandle& nh);
 
     //get MARRtino current pose
-    void get_pose();
+    void get_MARRtino_pose();
 
     //initialize publisher/subscriber
     void init();
 
     //compute potential fields
-    geometry_msgs::Twist apf(const double& eta1, const double& eta2,
-                             const double& d_star, const double& Q_star);
+    geometry_msgs::Twist apf(const double& k_attractive, const double& k_repulsive,
+                             const double& rho, const double& eta_0,
+                             std_msgs::Float64MultiArray map_info);
+
+    /***************************************************************************
+    * Variables for Artificial Potential Fields formula
+    *
+    ***************************************************************************/
+
+    const double k_attractive;
+    const double k_repulsive;
+
+    const int gamma; // >1;
+    double    eta_0;
+    double    rho;
 
 protected:
 
@@ -58,9 +71,12 @@ protected:
 
     tf::TransformListener listener_;
 
-    geometry_msgs::Twist vel_;             //Data published on /cmd_vel
+    // robot's origin w.r.t. "base_link"
+	tf::Stamped<tf::Pose> robot_pose;
 
-    double d_u_att_x, d_u_att_y, d_u_att_t;
-	double d_u_rep_x, d_u_rep_y, d_u_rep_t;
+	// robot's origin w.r.t. "odom"
+	tf::Stamped<tf::Pose> tf_robot_odom_pose;
+
+    geometry_msgs::Twist vel_;             //Data published on /cmd_vel
 
 };
