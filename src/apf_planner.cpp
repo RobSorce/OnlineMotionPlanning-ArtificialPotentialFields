@@ -10,7 +10,6 @@
  * moves the robot
  */
 
-
 #include <../include/apf_planner.h>
 
     /*########################################################################
@@ -26,8 +25,9 @@
 
 apf_motion_planner::apf_motion_planner(ros::NodeHandle& nh) :
 
-    k_attractive(-0.1),
-    k_repulsive(-0.01),
+    k_attractive(0.1),
+    k_repulsive(0.01),
+    k_theta(0.1),
     gamma(2),
     eta_0(70),
     rho(1.0),
@@ -49,6 +49,7 @@ geometry_msgs::Twist apf(const double& k_attractive, const double& k_repulsive,
     * Local variables for Artificial Potential Fields formula
     *
     ***************************************************************************/
+    geometry_msgs::Twist vel;
 
     double attractive_potential_x;
     double attractive_potential_y;
@@ -79,7 +80,7 @@ geometry_msgs::Twist apf(const double& k_attractive, const double& k_repulsive,
      * Set the goal 3 m ahead (static goal, always 3 m from the robot);
      ********************************************************************/
      Eigen::Vector2f goal(cols/2, 3000)
-     Eigen::Vector2f rtg(goal.x() - cols/2, goal.y() + 0 ); //Vettore robot -> goal
+     Eigen::Vector2f rtg(goal.x() - (cols/2), goal.y() + 0 ); //Vettore robot -> goal
      e = rtg.norm();
 
 
@@ -102,14 +103,16 @@ geometry_msgs::Twist apf(const double& k_attractive, const double& k_repulsive,
          attractive_potential_y = k_attractive * (rtg.y() / e);
      }
 
+     attractive_potential_theta = k_theta * std::atan2(attractive_potential_y, attractive_potential_x);
 
      /**********************************************
      * Repulsive Potential
      ***********************************************/
 
-    for(int x = 0; x < rows; x++){
+    for(int x = 0; x < rows; x++) {
         for (int y = 0; y < cols; y++) {
-            if (obstacles_map(i, j) == 1.0f) {
+            if (obstacles_map(i, j) == 1.0f)
+            {
 
                 /******************************************************
                 * Define eta_i: distance between obstacle and MARRtino;
@@ -123,19 +126,19 @@ geometry_msgs::Twist apf(const double& k_attractive, const double& k_repulsive,
                  *Repulsive potential formula (gradient)
                 *******************************************************/
 
-                if (eta_i <= eta_0) {
+                if (eta_i <= eta_0)
+                {
                     repulsive_potential_x = (k_repulsive/pow(eta_i, 2)) * pow((1/eta_i - 1/eta_0), gamma - 1) * ( rto.x() / eta_i); //Eigen access to Vector: rto(0)
                     repulsive_potential_y = (k_repulsive/pow(eta_i, 2)) * pow((1/eta_i - 1/eta_0), gamma - 1) * ( rto.y() / eta_i); //Eigen access to Vector: rto(1)
                 }
 
-                else{ //if(eta_i > eta_0)
+                else
+                { //if(eta_i > eta_0)
                     repulsive_potential_x = 0.0;
                     repulsive_potential_y = 0.0;
                 }
 
-                repulsive_potential_theta = repulsive_potential_x * (yb_corner[i].getOrigin().x()*sin(tf_yb_origin_yaw)+yb_corner[i].getOrigin().y()*cos(tf_yb_origin_yaw))
-
-                + d_u_rep_y * (yb_corner[i].getOrigin().x()*cos(tf_yb_origin_yaw)-yb_corner[i].getOrigin().y()*sin(tf_yb_origin_yaw));
+                repulsive_potential_theta = k_theta * std::atan2(repulsive_potential_y, repulsive_potential_x);
 
                 //Sommatoria di tutte le forze repulsive agenti sulle coordinate
                 vel.linear.x  += repulsive_potential_x;
@@ -152,14 +155,14 @@ geometry_msgs::Twist apf(const double& k_attractive, const double& k_repulsive,
     vel.angular.z += attractive_potential_theta;
 
     return vel;
-}
 
+}
 
 void apf_motion_planner::init()
 {
-    pub_velocity_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+    pub_velocity_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", , 10);
 
-    sub_odom_ = nh_.subscribe;
+    //sub_odom_ = nh_.subscribe;
 
     sub_obstacle_mapper_ = nh_.subscribe<std_msgs::Float64MultiArray>("/camera/obstacles_mapper_2d");
 }

@@ -50,6 +50,7 @@ public:
 
     const double k_attractive;
     const double k_repulsive;
+    const double k_theta;
 
     const int gamma; // >1;
     double    eta_0;
@@ -63,20 +64,14 @@ protected:
 
     ros::Subscriber sub_obstacle_mapper_; //Subscribes to (/obstacles_mapper_2d)
 
-    ros::Subscriber sub_odom_;            //Subscribes to (/odom)
+    //ros::Subscriber sub_odom_;            //Subscribes to (/odom)
 
-    std::string     cmd_vel_;
-
-    std::string     odom_;
-
-    tf::TransformListener listener_;
+    //tf::TransformListener listener_;
 
     // robot's origin w.r.t. "base_link"
-	tf::Stamped<tf::Pose> robot_pose;
+	//tf::Stamped<tf::Pose> robot_pose;
 
 	// robot's origin w.r.t. "odom"
-	tf::Stamped<tf::Pose> tf_robot_odom_pose;
-
-    geometry_msgs::Twist vel_;             //Data published on /cmd_vel
+	//tf::Stamped<tf::Pose> tf_robot_odom_pose;
 
 };
