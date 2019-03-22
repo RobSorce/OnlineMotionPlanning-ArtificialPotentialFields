@@ -41,9 +41,9 @@ apf_motion_planner::apf_motion_planner(ros::NodeHandle& nh) :
     * Artificial Potential Fields function
     ****************************************/
 
-geometry_msgs::Twist apf(const double& k_attractive, const double& k_repulsive,
-                         const double& rho, const double& eta_0,
-                         std_msgs::Float64MultiArray map_info)
+geometry_msgs::Twist apf(double k_attractive, double k_repulsive,
+                         double rho, double eta_0,
+                         const std_msgs::Float64MultiArray& map_info)
 {
     /***************************************************************************
     * Local variables for Artificial Potential Fields formula
@@ -70,19 +70,18 @@ geometry_msgs::Twist apf(const double& k_attractive, const double& k_repulsive,
     int rows = map_info.layout.dim[0].size;
     int cols = map_info.layout.dim[1].size;
 
-    Eigen::MatrixXf obstacles_map = Eigen::Map<Eigen::MatrixXf>(map_info.data, rows, cols);
+    Eigen::MatrixXf obstacles_map = Eigen::Map<Eigen::MatrixXd>(map_info.data, rows, cols).cast<float>();
 
-    /**********************************************************************
-     *Attractive Potential
-     **********************************************************************/
-
-    /*********************************************************************
-     * Set the goal 3 m ahead (static goal, always 3 m from the robot);
-     ********************************************************************/
+    /*************************************************************************
+     * Set the goal 3 m ahead (static goal, always set to 3 m from the robot);
+     ************************************************************************/
      Eigen::Vector2f goal(cols/2, 3000)
      Eigen::Vector2f rtg(goal.x() - (cols/2), goal.y() + 0 ); //Vettore robot -> goal
      e = rtg.norm();
 
+     /**********************************************************************
+      *Attractive Potential
+      **********************************************************************/
 
      if (e <= rho)
      {
@@ -158,9 +157,48 @@ geometry_msgs::Twist apf(const double& k_attractive, const double& k_repulsive,
 
 }
 
+void apf_motion_planner::apfCallback(const std_msgs::Float64MultiArray& obs)
+{
+    vel_ = apf(k_attractive, k_repulsive, rho, eta_0, &map_info);
+    pub_velocity_.publish(vel_);
+}
+
+/****************************************************************************
+ * Generates and shows the potential field map: shows the direction of the
+ * potential fields acting on each pixel of the map using arrows;
+ *
+ * UNCOMMENT to show the potential field map;
+ ****************************************************************************/
+
+void apf_motion_planner::generate_potential_map(const Eigen::MatrixXf& obstacles_map)
+{
+    int rows = obstacles_map.rows() * 10;
+    int cols = obstacles_map.cols() * 10;
+
+    geometry_msgs::Twist velocity;
+
+    cv::Mat1b cvMat(rows, cols);
+
+    for (int row = 0; row < obstacles_map.rows(); row += 10) {
+        for (int col = 0; col < obstacles_map.cols(); col += 10) {
+
+            velocity = apf(k_attractive, k_repulsive, rho, eta_0, &map_info);
+
+            /***************************************************************************
+             * C++: void arrowedLine(Mat& img, Point pt1, Point pt2, const Scalar& color,
+             * int thickness=1, int line_type=8, int shift=0, double tipLength=0.1)
+             **************************************************************************/
+            cv::arrowedLine(cvMat, cv::Point(row * 10, col * 10), cv::Point(row * 10 + velocity, col * 10 + velocity), scalar(0, 0, 255), 1, 8, 0, 0.1);
+        }
+    }
+
+    cv::imshow("Potential Map", cvMat);
+    cv::waitKey(30);
+}
+
 void apf_motion_planner::init()
 {
-    pub_velocity_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", , 10);
+    pub_velocity_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
 
     //sub_odom_ = nh_.subscribe;
 

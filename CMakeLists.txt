@@ -108,7 +108,7 @@ find_package(OpenCV REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-#  LIBRARIES progetto_tesi
+#  LIBRARIES new_progetto_tesi
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )
@@ -130,8 +130,8 @@ add_library(apf_planner_library
 	src/apf_planner.cpp
  	)
 
-add_library(obstacles_mapper2d_library
-	src/obstacles_mapper2d.cpp
+add_library(obstacles_mapper_2d_library
+	src/obstacles_mapper_2d.cpp
  	)
 
 ## Add cmake target dependencies of the library
@@ -142,7 +142,7 @@ add_library(obstacles_mapper2d_library
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(obstacles_mapper2d_node src/obstacles_mapper_2d_node.cpp) ##nome del nodo(primo argomento)
+add_executable(obstacles_mapper_2d_node src/obstacles_mapper_2d_node.cpp) ##nome del nodo(primo argomento)
 add_executable(apf_planner_node src/apf_planner_node.cpp)
 
 ## Rename C++ executable without prefix
@@ -156,7 +156,7 @@ add_executable(apf_planner_node src/apf_planner_node.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
- target_link_libraries(obstacles_mapper2d_node obstacles_mapper2d_library
+ target_link_libraries(obstacles_mapper_2d_node obstacles_mapper_2d_library
    ${catkin_LIBRARIES}
    ${OpenCV_LIBRARIES}
  )
@@ -213,4 +213,3 @@ add_executable(apf_planner_node src/apf_planner_node.cpp)
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-

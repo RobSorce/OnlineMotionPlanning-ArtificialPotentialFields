@@ -1,6 +1,5 @@
 #include <cmath>					// to use: atan2, sqrt, pow, etc
 #include <vector>
-#include <iomanip>     				// to use: setprecision()
 #include <sstream>
 #include <iostream>
 #include <ros/ros.h>
@@ -29,19 +28,24 @@ class apf_motion_planner
 {
 
 public:
+
     //Constructor
     apf_motion_planner(ros::NodeHandle& nh);
 
+    void apfCallback(const std_msgs::Float64MultiArray& obs);
+
+    void generate_potential_map(const Eigen::MatrixXf& obstacles_map);
+
     //get MARRtino current pose
-    void get_MARRtino_pose();
+    //void get_MARRtino_pose();
 
     //initialize publisher/subscriber
     void init();
 
     //compute potential fields
-    geometry_msgs::Twist apf(const double& k_attractive, const double& k_repulsive,
-                             const double& rho, const double& eta_0,
-                             std_msgs::Float64MultiArray map_info);
+    geometry_msgs::Twist apf(double k_attractive, double k_repulsive,
+                             double rho, double eta_0,
+                             const std_msgs::Float64MultiArray& map_info);
 
     /***************************************************************************
     * Variables for Artificial Potential Fields formula
@@ -73,5 +77,7 @@ protected:
 
 	// robot's origin w.r.t. "odom"
 	//tf::Stamped<tf::Pose> tf_robot_odom_pose;
+
+    geometry_msgs::Twist vel_;
 
 };

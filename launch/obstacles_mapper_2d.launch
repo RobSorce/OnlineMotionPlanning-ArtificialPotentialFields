@@ -2,5 +2,7 @@
 	<!-- run progetto_tesi node -->
 <include file="/opt/ros/kinetic/share/openni_launch/launch/openni.launch"/>
 <!--	<arg name="depth_frame_id" value = "camera_depth_frame"/> -->
-<node pkg = "new_progetto_tesi" type = "new_progetto_tesi" name = "obstacles_mapper_2d"/>
+<node pkg = "new_progetto_tesi" type = "new_progetto_tesi" name = "obstacles_mapper_2d_node"/>
+<node pkg = "new_progetto_tesi" type = "new_progetto_tesi" name = "apf_planner_node"/>
+
 </launch>
