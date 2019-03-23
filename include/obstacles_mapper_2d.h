@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include <ros/ros.h>
 #include <Eigen/Core>

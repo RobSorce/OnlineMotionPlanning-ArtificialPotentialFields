@@ -34,17 +34,16 @@ apf_motion_planner::apf_motion_planner(ros::NodeHandle& nh) :
     nh_(nh)
 
 {
-
+        std::cerr << "/* error message Constructor*/" << '\n';
 }
 
     /***************************************
     * Artificial Potential Fields function
     ****************************************/
 
-geometry_msgs::Twist apf(double k_attractive, double k_repulsive,
-                         double rho, double eta_0,
-                         const std_msgs::Float64MultiArray& map_info)
+geometry_msgs::Twist apf_motion_planner::apf(const Eigen::MatrixXf& map_info)
 {
+//    std::cerr << "/* error message apf start*/" << '\n';
     /***************************************************************************
     * Local variables for Artificial Potential Fields formula
     *
@@ -67,15 +66,15 @@ geometry_msgs::Twist apf(double k_attractive, double k_repulsive,
      * conversione da std_msgs::Float64MultiArray -> Eigen::MatrixXf;
      ******************************************************************/
 
-    int rows = map_info.layout.dim[0].size;
-    int cols = map_info.layout.dim[1].size;
+    int rows = map_info.rows();//; map_info.layout.dim[0].size;
+    int cols = map_info.cols(); //.layout.dim[1].size;
 
-    Eigen::MatrixXf obstacles_map = Eigen::Map<Eigen::MatrixXd>(map_info.data, rows, cols).cast<float>();
+    //Eigen::MatrixXf obstacles_map = Eigen::Map<Eigen::MatrixXd>(map_info.data, rows, cols).cast<float>();
 
     /*************************************************************************
      * Set the goal 3 m ahead (static goal, always set to 3 m from the robot);
      ************************************************************************/
-     Eigen::Vector2f goal(cols/2, 3000)
+     Eigen::Vector2f goal(cols/2, 3000);
      Eigen::Vector2f rtg(goal.x() - (cols/2), goal.y() + 0 ); //Vettore robot -> goal
      e = rtg.norm();
 
@@ -110,7 +109,7 @@ geometry_msgs::Twist apf(double k_attractive, double k_repulsive,
 
     for(int x = 0; x < rows; x++) {
         for (int y = 0; y < cols; y++) {
-            if (obstacles_map(i, j) == 1.0f)
+            if (map_info(x, y) == 1.0f)
             {
 
                 /******************************************************
@@ -126,9 +125,9 @@ geometry_msgs::Twist apf(double k_attractive, double k_repulsive,
                 *******************************************************/
 
                 if (eta_i <= eta_0)
-                {
-                    repulsive_potential_x = (k_repulsive/pow(eta_i, 2)) * pow((1/eta_i - 1/eta_0), gamma - 1) * ( rto.x() / eta_i); //Eigen access to Vector: rto(0)
-                    repulsive_potential_y = (k_repulsive/pow(eta_i, 2)) * pow((1/eta_i - 1/eta_0), gamma - 1) * ( rto.y() / eta_i); //Eigen access to Vector: rto(1)
+                {   /*Modificato: tolto elevamento a potenza gamma - 1*/
+                    repulsive_potential_x = (k_repulsive/pow(eta_i, 2)) * std::pow((1/eta_i - 1/eta_0), gamma ) * ( rto.x() / eta_i); //Eigen access to Vector: rto(0)
+                    repulsive_potential_y = (k_repulsive/pow(eta_i, 2)) * std::pow((1/eta_i - 1/eta_0), gamma ) * ( rto.y() / eta_i); //Eigen access to Vector: rto(1)
                 }
 
                 else
@@ -157,10 +156,21 @@ geometry_msgs::Twist apf(double k_attractive, double k_repulsive,
 
 }
 
-void apf_motion_planner::apfCallback(const std_msgs::Float64MultiArray& obs)
+void apf_motion_planner::apfCallback(const std_msgs::Float64MultiArray::ConstPtr& map_info)
 {
-    vel_ = apf(k_attractive, k_repulsive, rho, eta_0, &map_info);
+    std::cerr << "/* error message apfCallback start*/" << '\n';
+    int rows = map_info->layout.dim[0].size;
+    int cols = map_info->layout.dim[1].size;
+
+    double* obstacles_array = const_cast<double*>(map_info->data.data());
+    Eigen::MatrixXf obstacles_map = Eigen::Map<Eigen::MatrixXd>(obstacles_array, rows, cols).cast<float>();
+
+    vel_ = apf(obstacles_map);
     pub_velocity_.publish(vel_);
+
+    generate_potential_map(obstacles_map);
+
+    std::cerr << "/* error message apfCallback end*/" << '\n';
 }
 
 /****************************************************************************
@@ -172,29 +182,34 @@ void apf_motion_planner::apfCallback(const std_msgs::Float64MultiArray& obs)
 
 void apf_motion_planner::generate_potential_map(const Eigen::MatrixXf& obstacles_map)
 {
+    std::cerr << "/* error message generate_potential_map start*/" << '\n';
     int rows = obstacles_map.rows() * 10;
     int cols = obstacles_map.cols() * 10;
 
     geometry_msgs::Twist velocity;
 
-    cv::Mat1b cvMat(rows, cols);
+    cv::Mat1b cvMatObs(rows, cols);
 
-    for (int row = 0; row < obstacles_map.rows(); row += 10) {
-        for (int col = 0; col < obstacles_map.cols(); col += 10) {
+    for (int row = 0; row < obstacles_map.rows(); row += 100) {
+        for (int col = 0; col < obstacles_map.cols(); col += 100) {
 
-            velocity = apf(k_attractive, k_repulsive, rho, eta_0, &map_info);
+            velocity = apf(obstacles_map);
 
             /***************************************************************************
              * C++: void arrowedLine(Mat& img, Point pt1, Point pt2, const Scalar& color,
              * int thickness=1, int line_type=8, int shift=0, double tipLength=0.1)
              **************************************************************************/
-            cv::arrowedLine(cvMat, cv::Point(row * 10, col * 10), cv::Point(row * 10 + velocity, col * 10 + velocity), scalar(0, 0, 255), 1, 8, 0, 0.1);
+            cv::arrowedLine(cvMatObs, cv::Point(row * 10, col * 10), cv::Point(row * 10 + velocity.linear.x, col * 10 + velocity.linear.y), cv::Scalar(0, 0, 255), 1, 8, 0, 0.1);
         }
+        std::cerr << "/* error message generate_potential_map end loop*/" << '\n';
     }
+    std::cerr << "/* error message generate_potential_map creation*/" << '\n';
 
-    cv::imshow("Potential Map", cvMat);
+    cv::imshow("Potential Map", cvMatObs);
     cv::waitKey(30);
+    std::cerr << "/* error message generate_potential_map end*/" << '\n';
 }
+
 
 void apf_motion_planner::init()
 {
@@ -202,5 +217,10 @@ void apf_motion_planner::init()
 
     //sub_odom_ = nh_.subscribe;
 
-    sub_obstacle_mapper_ = nh_.subscribe<std_msgs::Float64MultiArray>("/camera/obstacles_mapper_2d");
+    sub_obstacle_mapper_ = nh_.subscribe<std_msgs::Float64MultiArray>("/camera/obstacles2D", 1, &apf_motion_planner::apfCallback, this);
 }
+
+
+/**********************************
+*  Ti prego... fai qualcosa!!!!
+*********************************/

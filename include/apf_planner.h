@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cmath>					// to use: atan2, sqrt, pow, etc
 #include <vector>
 #include <sstream>
@@ -32,7 +34,7 @@ public:
     //Constructor
     apf_motion_planner(ros::NodeHandle& nh);
 
-    void apfCallback(const std_msgs::Float64MultiArray& obs);
+    void apfCallback(const std_msgs::Float64MultiArray::ConstPtr& obs);
 
     void generate_potential_map(const Eigen::MatrixXf& obstacles_map);
 
@@ -43,22 +45,20 @@ public:
     void init();
 
     //compute potential fields
-    geometry_msgs::Twist apf(double k_attractive, double k_repulsive,
-                             double rho, double eta_0,
-                             const std_msgs::Float64MultiArray& map_info);
+    geometry_msgs::Twist apf(const Eigen::MatrixXf& map_info);
 
     /***************************************************************************
     * Variables for Artificial Potential Fields formula
     *
     ***************************************************************************/
 
-    const double k_attractive;
-    const double k_repulsive;
-    const double k_theta;
+    double k_attractive;
+    double k_repulsive;
+    double k_theta;
 
-    const int gamma; // >1;
-    double    eta_0;
-    double    rho;
+    double gamma; // >1;
+    double eta_0;
+    double rho;
 
 protected:
 

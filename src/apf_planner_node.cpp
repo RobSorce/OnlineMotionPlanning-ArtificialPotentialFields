@@ -1,5 +1,3 @@
-#pragma once
-
 #include <../include/apf_planner.h>
 
 int main(int argc, char** argv)

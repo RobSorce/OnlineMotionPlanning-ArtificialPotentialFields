@@ -108,7 +108,7 @@ find_package(OpenCV REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-#  LIBRARIES new_progetto_tesi
+  LIBRARIES new_progetto_tesi
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )

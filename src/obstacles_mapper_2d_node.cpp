@@ -1,5 +1,3 @@
-#pragma once
-
 #include <../include/obstacles_mapper_2d.h>
 
 int main(int argc, char** argv)
