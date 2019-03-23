@@ -219,8 +219,3 @@ void apf_motion_planner::init()
 
     sub_obstacle_mapper_ = nh_.subscribe<std_msgs::Float64MultiArray>("/camera/obstacles2D", 1, &apf_motion_planner::apfCallback, this);
 }
-
-
-/**********************************
-*  Ti prego... fai qualcosa!!!!
-*********************************/
