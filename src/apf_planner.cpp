@@ -126,8 +126,8 @@ geometry_msgs::Twist apf_motion_planner::apf(const Eigen::MatrixXf& map_info)
 
                 if (eta_i <= eta_0)
                 {   /*Modificato: tolto elevamento a potenza gamma - 1*/
-                    repulsive_potential_x = (k_repulsive/pow(eta_i, 2)) * std::pow((1/eta_i - 1/eta_0), gamma ) * ( rto.x() / eta_i); //Eigen access to Vector: rto(0)
-                    repulsive_potential_y = (k_repulsive/pow(eta_i, 2)) * std::pow((1/eta_i - 1/eta_0), gamma ) * ( rto.y() / eta_i); //Eigen access to Vector: rto(1)
+                    repulsive_potential_x = (k_repulsive/pow(eta_i, 2)) * std::pow((1/eta_i - 1/eta_0), gamma - 1) * ( rto.x() / eta_i); //Eigen access to Vector: rto(0)
+                    repulsive_potential_y = (k_repulsive/pow(eta_i, 2)) * std::pow((1/eta_i - 1/eta_0), gamma - 1) * ( rto.y() / eta_i); //Eigen access to Vector: rto(1)
                 }
 
                 else
