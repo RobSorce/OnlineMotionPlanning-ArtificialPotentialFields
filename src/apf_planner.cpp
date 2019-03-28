@@ -282,8 +282,8 @@ void apf_motion_planner::apfCallback(const std_msgs::Float64MultiArray::ConstPtr
     double* obstacles_array = const_cast<double*>(map_info->data.data());
     Eigen::MatrixXf obstacles_map = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(obstacles_array, rows, cols).cast<float>();
 
-    vel_ = apf(obstacles_map, cols/2, 0);
-    //vel_ = vortex(obstacles_map, cols/2.0);
+    //vel_ = apf(obstacles_map, cols/2, 0);
+    vel_ = vortex(obstacles_map, cols/2.0, 0);
     pub_velocity_.publish(vel_);
 
     generate_potential_map(obstacles_map);
@@ -298,7 +298,6 @@ void apf_motion_planner::apfCallback(const std_msgs::Float64MultiArray::ConstPtr
 
 void apf_motion_planner::generate_potential_map(const Eigen::MatrixXf& obstacles_map)
 {
-    std::cerr << "/* message generate_potential_map start*/" << '\n';
     //int rows = obstacles_map.rows() * 2;
     //int cols = obstacles_map.cols() * 2;
 
@@ -311,7 +310,7 @@ void apf_motion_planner::generate_potential_map(const Eigen::MatrixXf& obstacles
     cv::eigen2cv(obstacles_map, potential_map);// obs_map);
 
 
-    std::cerr << potential_map.rows <<" " <<potential_map.cols <<" " << obstacles_map.rows() <<" " <<obstacles_map.cols() <<"\n";
+    //std::cerr << potential_map.rows <<" " <<potential_map.cols <<" " << obstacles_map.rows() <<" " <<obstacles_map.cols() <<"\n";
 
     for (int y = 0; y < obstacles_map.rows(); y += 100) {
         for (int x = 0; x < obstacles_map.cols(); x += 100) {
