@@ -133,7 +133,7 @@ geometry_msgs::Twist apf_motion_planner::apf(const Eigen::MatrixXf& map_info, fl
                     repulsive_potential_y = 0.0;
                 }
 
-                repulsive_potential_theta = k_theta * std::atan2(repulsive_potential_y, -repulsive_potential_x);
+                repulsive_potential_theta = k_theta * std::atan2(repulsive_potential_y, repulsive_potential_x);
 
                 //Sommatoria di tutte le forze repulsive agenti sulle coordinate
                 vel.linear.x  -= repulsive_potential_x;
