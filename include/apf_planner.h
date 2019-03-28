@@ -38,6 +38,8 @@ public:
 
     void generate_potential_map(const Eigen::MatrixXf& obstacles_map);
 
+    //void odomCallback(const nav_msgs::Odometry latest_odom);
+
     //get MARRtino current pose
     //void get_MARRtino_pose();
 
@@ -45,7 +47,10 @@ public:
     void init();
 
     //compute potential fields
-    geometry_msgs::Twist apf(const Eigen::MatrixXf& map_info);
+    geometry_msgs::Twist apf(const Eigen::MatrixXf& map_info, float xr, float yr);
+
+    //compute vortex fields
+    geometry_msgs::Twist vortex(const Eigen::MatrixXf& map_info, float xr, float yr);
 
     /***************************************************************************
     * Variables for Artificial Potential Fields formula

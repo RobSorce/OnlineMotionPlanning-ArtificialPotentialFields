@@ -95,8 +95,8 @@ void obstacles_mapper_2d::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& 
 
     // map size parameters (computed based on resolutions and sight)
     // std::cerr <<"step\n";
-    int cols = desired_width_mm / cell_dimension_mm; //1200;
-    int rows = desired_depth_mm / cell_dimension_mm; //600;
+    int cols = desired_width_mm / cell_dimension_mm; //1000;
+    int rows = desired_depth_mm / cell_dimension_mm; //400;
 
     //int minxc = 600;
     //int minzc = 600;
@@ -127,16 +127,17 @@ void obstacles_mapper_2d::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& 
 
     //Visualizza la matrice degli ostacoli;
     //UNCOMMENT to visualize the output obstacle map
-
+    ///////////////////////////////////////////////////////////////////////////
     cv::Mat1b cvMat(rows, cols);
     cv::eigen2cv(mat, cvMat);
     cv::imshow("Obstacle Map", cvMat);
     cv::waitKey(30);
+    ///////////////////////////////////////////////////////////////////////////
 
     // conversione matrice da MatrixXf -> std_msgs::Float64MultiArray
     std_msgs::Float64MultiArray map_info;
-    tf::matrixEigenToMsg(mat, map_info);
 
+    tf::matrixEigenToMsg(mat, map_info);
     pub_.publish(map_info);
 
     /**

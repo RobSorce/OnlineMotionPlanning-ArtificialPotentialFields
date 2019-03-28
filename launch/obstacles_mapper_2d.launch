@@ -5,4 +5,7 @@
 <node pkg = "new_progetto_tesi" type = "obstacles_mapper_2d_node" name = "obstacles_mapper_2d_node"/>
 <node pkg = "new_progetto_tesi" type = "apf_planner_node" name = "apf_planner_node"/>
 
+<node pkg="tf" type="static_transform_publisher" name="base_footprint_to_base_link" args="0 0 0 0 0 0 base_footprint base_link 10" />
+<node pkg="tf" type="static_transform_publisher" name="base_link_to_camera_tf" args="0 0 1.0 0 0.78539816339 0 base_link camera 10" />
+
 </launch>
