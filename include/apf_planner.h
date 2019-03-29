@@ -24,7 +24,7 @@
 #include <tf/transform_datatypes.h>		// to use: tf datatypes
 #include <tf/transform_broadcaster.h>	// to use: tf broadcaster
 
-
+typedef ObstacleInfo std::vector<cv::Point>;
 
 class apf_motion_planner
 {

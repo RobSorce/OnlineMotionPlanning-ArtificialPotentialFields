@@ -23,6 +23,15 @@
      *########################################################################
     */
 
+    /*########################################################################
+     * Nota: Accesso dati a matrice OpenCV
+     *       i dati della matrice OpenCV sono immagazzinati in formato
+     *       ColMajor, scandisco prima le colonne, successivamente le righe;
+     *       x = colonne (width), y = righe (height);
+     *
+     *########################################################################
+    */
+
 apf_motion_planner::apf_motion_planner(ros::NodeHandle& nh) :
 
     k_attractive(0.01),
@@ -41,7 +50,7 @@ apf_motion_planner::apf_motion_planner(ros::NodeHandle& nh) :
     * Artificial Potential Fields function
     ****************************************/
 
-geometry_msgs::Twist apf_motion_planner::apf(const Eigen::MatrixXf& map_info, float xr, float yr)
+geometry_msgs::Twist apf_motion_planner::apf(const Eigen::Mat1f& map_info, float xr, float yr)
 {
 //    std::cerr << "/* error message apf start*/" << '\n';
     /***************************************************************************
@@ -66,8 +75,8 @@ geometry_msgs::Twist apf_motion_planner::apf(const Eigen::MatrixXf& map_info, fl
      * conversione da std_msgs::Float64MultiArray -> Eigen::MatrixXf;
      ******************************************************************/
 
-    int rows = map_info.rows(); //map_info.layout.dim[0].size;
-    int cols = map_info.cols(); //.layout.dim[1].size;
+    int rows = map_info.rows; //map_info.layout.dim[0].size;
+    int cols = map_info.cols; //.layout.dim[1].size;
 
     //Eigen::MatrixXf obstacles_map = Eigen::Map<Eigen::MatrixXd>(map_info.data, rows, cols).cast<float>();
 
@@ -107,7 +116,7 @@ geometry_msgs::Twist apf_motion_planner::apf(const Eigen::MatrixXf& map_info, fl
      ***********************************************/
      for(int x = 0; x < cols; x++) {
          for (int y = 0; y < rows; y++) {
-             if (map_info(y, x) == 1.0f)
+             if (map_info(x, y) == 1.0f)
              {
                  /******************************************************
                  * Define eta_i: distance between obstacle and MARRtino;
@@ -160,73 +169,45 @@ geometry_msgs::Twist apf_motion_planner::apf(const Eigen::MatrixXf& map_info, fl
     * vortex Fields function
     ****************************************/
 
-geometry_msgs::Twist apf_motion_planner::vortex(const Eigen::MatrixXf& map_info, float xr, float yr)
+geometry_msgs::Twist apf_motion_planner::repulsive_potential(const std::vector<ObstacleInfo>& obstacles_array, float xr, float yr)
 {
-    //    std::cerr << "/* error message apf start*/" << '\n';
     /***************************************************************************
     * Local variables for Artificial Potential Fields formula
     *
     ***************************************************************************/
-    geometry_msgs::Twist vel;
 
-    double attractive_potential_x;
-    double attractive_potential_y;
-    double attractive_potential_theta;
+    geometry_msgs::Twist attractive_vel;
+    geometry_msgs::Twist repulsive_vel;
+    geometry_msgs::Twist total_vel;
 
 	double repulsive_potential_x;
     double repulsive_potential_y;
     double repulsive_potential_theta;
 
     double eta_i; //distance from obstacle; etai(q);
-    double e;     //distance from goal; e(q)
+
+    std::vector<cv::Point> obstacle_closest_points(obstacles_array.size());
 
     /******************************************************************
      * conversione dati contenuti nell'array map_info
      * conversione da std_msgs::Float64MultiArray -> Eigen::MatrixXf;
      ******************************************************************/
 
-    int rows = map_info.rows(); //map_info.layout.dim[0].size;
-    int cols = map_info.cols(); //.layout.dim[1].size;
+    int rows = map_info.rows; //map_info.layout.dim[0].size;
+    int cols = map_info.cols; //.layout.dim[1].size;
 
     //Eigen::MatrixXf obstacles_map = Eigen::Map<Eigen::MatrixXd>(map_info.data, rows, cols).cast<float>();
 
-    /*************************************************************************
-     * Set the goal 2 m ahead (static goal, always set to 2 m from the robot);
-     ************************************************************************/
      Eigen::Vector2f goal(cols/2, 1000);
-     Eigen::Vector2f rtg(goal.x() - xr, goal.y() - yr ); //Vettore robot -> goal
-     e = rtg.norm();
 
-     /**********************************************************************
-      *Attractive Potential
-      **********************************************************************/
-     if (e <= rho)
-     {
-        /********************************************************************
-        * Paraboloidal
-        * Linear force in e, robot behavior near the goal
-        ********************************************************************/
-         attractive_potential_x = k_attractive * rtg.x();
-         attractive_potential_y = k_attractive * rtg.y();
-     }
-     else // if(e > rho)
-     {
-        /*******************************************************************
-        * Conical
-        * Constant force, robot behavior far from the goal
-        *******************************************************************/
-         attractive_potential_x = k_attractive * (rtg.x() / e);
-         attractive_potential_y = k_attractive * (rtg.y() / e);
-     }
-
-     attractive_potential_theta = k_theta * std::atan2(attractive_potential_y, attractive_potential_x);
+     attractive_vel = attractive_potential(goal.x(), goal.y(), xr, yr);
 
      /**********************************************
      * Repulsive Potential
      ***********************************************/
      for(int x = 0; x < cols; x++) {
          for (int y = 0; y < rows; y++) {
-             if (map_info(y, x) == 1.0f)
+             if (map_info(x, y) == 1.0f)
              {
                  /******************************************************
                  * Define eta_i: distance between obstacle and MARRtino;
@@ -239,7 +220,6 @@ geometry_msgs::Twist apf_motion_planner::vortex(const Eigen::MatrixXf& map_info,
                  /******************************************************
                  *Repulsive potential formula (gradient)
                  *******************************************************/
-
                  if (eta_i <= eta_0)
                  {
                      repulsive_potential_x = (k_repulsive/pow(eta_i, 2)) * std::pow((1/eta_i - 1/eta_0), gamma - 1) * ( rto.x() / eta_i); //Eigen access to Vector: rto(0)
@@ -251,12 +231,12 @@ geometry_msgs::Twist apf_motion_planner::vortex(const Eigen::MatrixXf& map_info,
                      repulsive_potential_y = 0.0;
                  }
 
-                 repulsive_potential_theta = k_theta * std::atan2(repulsive_potential_x, -repulsive_potential_y);
+                 repulsive_potential_theta = k_theta * std::atan2(repulsive_potential_y, repulsive_potential_x);
 
                  //Sommatoria di tutte le forze repulsive agenti sulle coordinate
-                 vel.linear.x  -=  repulsive_potential_y;
-                 vel.linear.y  -= -repulsive_potential_x;
-                 vel.angular.z -=  repulsive_potential_theta;
+                 vel.linear.x  -= repulsive_potential_x;
+                 vel.linear.y  -= repulsive_potential_y;
+                 vel.angular.z -= repulsive_potential_theta;
 
              }
          }
@@ -275,19 +255,97 @@ geometry_msgs::Twist apf_motion_planner::vortex(const Eigen::MatrixXf& map_info,
      return vel;
 }
 
+geometry_msgs::Twist apf_motion_planner::attractive_potential(float xgoal, float ygoal, float xrobot, float yrobot)
+{
+
+    geometry_msgs::Twist vel;
+
+    double attractive_potential_x;
+    double attractive_potential_y;
+    double attractive_potential_theta;
+
+    double e;     //distance from goal; e(q)
+
+    Eigen::Vector2f rtg(xgoal - xrobot, ygoal - yrobot); //Vettore robot -> goal
+    e = rtg.norm();
+
+    /**********************************************************************
+     *Attractive Potential
+     **********************************************************************/
+    if (e <= rho)
+    {
+       /********************************************************************
+       * Paraboloidal
+       * Linear force in e, robot behavior near the goal
+       ********************************************************************/
+        attractive_potential_x = k_attractive * rtg.x();
+        attractive_potential_y = k_attractive * rtg.y();
+    }
+    else // if(e > rho)
+    {
+       /*******************************************************************
+       * Conical
+       * Constant force, robot behavior far from the goal
+       *******************************************************************/
+        attractive_potential_x = k_attractive * (rtg.x() / e);
+        attractive_potential_y = k_attractive * (rtg.y() / e);
+    }
+
+    attractive_potential_theta = k_theta * std::atan2(attractive_potential_y, attractive_potential_x);
+
+    //Sommatoria di tutte le forze attrattive agenti sulle coordinate
+    vel.linear.x  = attractive_potential_x;
+    vel.linear.y  = attractive_potential_y;
+    vel.angular.z = attractive_potential_theta;
+
+    /************************************************************************
+    * Print vel data
+    std::cerr << vel << '\n';
+    *************************************************************************/
+
+    return vel;
+
+}
+
+
+
+std::vector<ObstacleInfo> extractObstaclesInfo(const cv::Mat& obstacles_map, int num_obstacles)
+{
+    std::vector<ObstacleInfo> vec(num_obstacles);
+
+    for (int row = 0; row < obstacles_map.rows; row++) {
+        for (int col = 0; col < obstacles_map.cols; col++) {
+            if (obstacles_map(col, row) != 0)
+            {
+                vec[obstacles_map(col, row)-1].push_back(cv::Point(col, row));
+            }
+        }
+    }
+
+    return vec;
+}
+
+
 void apf_motion_planner::apfCallback(const std_msgs::Float64MultiArray::ConstPtr& map_info)
 {
+    cv::Mat obstacles_map;
+    cv::Mat labeled_obstacles_map;
+
+    int num_obstacles
     int rows = map_info->layout.dim[0].size;
     int cols = map_info->layout.dim[1].size;
 
-    double* obstacles_array = const_cast<double*>(map_info->data.data());
-    Eigen::MatrixXf obstacles_map = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(obstacles_array, rows, cols).cast<float>();
+    obstacles_map = cv::Mat(rows, cols, const_cast<double*>(map_info->data.data()));
 
-    vel_ = apf(obstacles_map, cols/2, 0);
+    num_obstacles = cv::connectedComponents(obstacles_map, labeled_obstacles_map);
+
+    std::vector<ObstacleInfo> obstacles = extractObstaclesInfo(labeled_obstacles_map, num_obstacles);
+
+    vel_ = apf(cols/2, 0, obst);
     //vel_ = vortex(obstacles_map, cols/2.0, 0);
     pub_velocity_.publish(vel_);
 
-    generate_potential_map(obstacles_map);
+    generate_potential_map(labeled_obstacles);
 }
 
     /**************************************************************************
@@ -297,34 +355,21 @@ void apf_motion_planner::apfCallback(const std_msgs::Float64MultiArray::ConstPtr
      * UNCOMMENT to show the potential field map;
      **************************************************************************/
 
-void apf_motion_planner::generate_potential_map(const Eigen::MatrixXf& obstacles_map)
+void apf_motion_planner::generate_potential_map(const cv::Mat1f& obstacles_map)
 {
-    //int rows = obstacles_map.rows() * 2;
-    //int cols = obstacles_map.cols() * 2;
-
-    //std::cerr << "OpenCV version: " << " " << CV_VERSION << '\n';
     geometry_msgs::Twist velocity;
+    cv::Mat potential_map = obstacles_map;
 
-    //cv::Mat1f obs_map(obstacles_map.rows(), obstacles_map.cols());
-    cv::Mat potential_map;
-
-    //cv::eigen2cv(obstacles_map, obs_map);
-    cv::eigen2cv(obstacles_map, potential_map);// obs_map);
-
-    //std::cerr << potential_map.rows <<" " <<potential_map.cols <<" " << obstacles_map.rows() <<" " <<obstacles_map.cols() <<"\n";
-
-    for (int y = 0; y < obstacles_map.rows(); y += 100) {
-        for (int x = 0; x < obstacles_map.cols(); x += 100) {
+    for (int y = 0; y < obstacles_map.rows; y += 100) {
+        for (int x = 0; x < obstacles_map.cols; x += 100) {
 
             velocity = apf(obstacles_map, x, y);
-            //std::cerr<<velocity.linear.x <<" " <<velocity.linear.y <<"\n";
+
             /***************************************************************************
              * C++: void arrowedLine(Mat& img, Point pt1, Point pt2, const Scalar& color,
              * int thickness=1, int line_type=8, int shift=0, double tipLength=0.1)
              **************************************************************************/
-
             cv::arrowedLine(potential_map, cv::Point(x, y), cv::Point(x + velocity.linear.x*1500, y + velocity.linear.y*1500), cv::Scalar(255, 255, 255), 1, 1, 0, 0.1);
-            //cv::line(potential_map, cv::Point(col, row), cv::Point(col + velocity.linear.x*1500, row + velocity.linear.y*1500), cv::Scalar(255, 255, 255));
         }
     }
 
