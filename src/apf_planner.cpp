@@ -188,6 +188,7 @@ geometry_msgs::Twist apf_motion_planner::repulsive_potential(const std::vector<O
 
     std::vector<cv::Point> obstacle_closest_points(obstacles_array.size());
 
+
     /******************************************************************
      * conversione dati contenuti nell'array map_info
      * conversione da std_msgs::Float64MultiArray -> Eigen::MatrixXf;
