@@ -43,7 +43,6 @@ apf_motion_planner::apf_motion_planner(ros::NodeHandle& nh) :
 
 geometry_msgs::Twist apf_motion_planner::apf(const Eigen::MatrixXf& map_info, float xr, float yr)
 {
-//    std::cerr << "/* error message apf start*/" << '\n';
     /***************************************************************************
     * Local variables for Artificial Potential Fields formula
     *
@@ -162,7 +161,6 @@ geometry_msgs::Twist apf_motion_planner::apf(const Eigen::MatrixXf& map_info, fl
 
 geometry_msgs::Twist apf_motion_planner::vortex(const Eigen::MatrixXf& map_info, float xr, float yr)
 {
-    //    std::cerr << "/* error message apf start*/" << '\n';
     /***************************************************************************
     * Local variables for Artificial Potential Fields formula
     *
@@ -267,10 +265,10 @@ geometry_msgs::Twist apf_motion_planner::vortex(const Eigen::MatrixXf& map_info,
      vel.linear.y  += attractive_potential_y;
      vel.angular.z += attractive_potential_theta;
 
-     /************************************************************************
-     * Print vel data
-     std::cerr << vel << '\n';
-     *************************************************************************/
+     ///////////////////////////////////////////////////////////////////////
+     // Print vel data
+     // std::cerr << vel << '\n';
+     //////////////////////////////////////////////////////////////////////
 
      return vel;
 }
@@ -305,11 +303,9 @@ void apf_motion_planner::generate_potential_map(const Eigen::MatrixXf& obstacles
     //std::cerr << "OpenCV version: " << " " << CV_VERSION << '\n';
     geometry_msgs::Twist velocity;
 
-    //cv::Mat1f obs_map(obstacles_map.rows(), obstacles_map.cols());
     cv::Mat potential_map;
 
-    //cv::eigen2cv(obstacles_map, obs_map);
-    cv::eigen2cv(obstacles_map, potential_map);// obs_map);
+    cv::eigen2cv(obstacles_map, potential_map);
 
     //std::cerr << potential_map.rows <<" " <<potential_map.cols <<" " << obstacles_map.rows() <<" " <<obstacles_map.cols() <<"\n";
 
@@ -323,8 +319,9 @@ void apf_motion_planner::generate_potential_map(const Eigen::MatrixXf& obstacles
              * int thickness=1, int line_type=8, int shift=0, double tipLength=0.1)
              **************************************************************************/
 
-            cv::arrowedLine(potential_map, cv::Point(x, y), cv::Point(x + velocity.linear.x*1500, y + velocity.linear.y*1500), cv::Scalar(255, 255, 255), 1, 1, 0, 0.1);
-            //cv::line(potential_map, cv::Point(col, row), cv::Point(col + velocity.linear.x*1500, row + velocity.linear.y*1500), cv::Scalar(255, 255, 255));
+//            cv::arrowedLine(potential_map, cv::Point(x, y), cv::Point(x + velocity.linear.x*1500, y + velocity.linear.y*1500), cv::Scalar(255, 255, 255), 1, 1, 0, 0.1);
+            cv::arrowedLine(potential_map, cv::Point(x, y), cv::Point(x + velocity.linear.x*1500, y + velocity.linear.y*1500)/100, cv::Scalar(255, 255, 255), 1, 1, 0, 0.1);
+
         }
     }
 
