@@ -68,8 +68,6 @@ geometry_msgs::Twist apf_motion_planner::apf(const Eigen::MatrixXf& map_info, fl
     int rows = map_info.rows(); //map_info.layout.dim[0].size;
     int cols = map_info.cols(); //.layout.dim[1].size;
 
-    //Eigen::MatrixXf obstacles_map = Eigen::Map<Eigen::MatrixXd>(map_info.data, rows, cols).cast<float>();
-
     /*************************************************************************
      * Set the goal 2 m ahead (static goal, always set to 2 m from the robot);
      ************************************************************************/
@@ -185,8 +183,6 @@ geometry_msgs::Twist apf_motion_planner::vortex(const Eigen::MatrixXf& map_info,
 
     int rows = map_info.rows(); //map_info.layout.dim[0].size;
     int cols = map_info.cols(); //.layout.dim[1].size;
-
-    //Eigen::MatrixXf obstacles_map = Eigen::Map<Eigen::MatrixXd>(map_info.data, rows, cols).cast<float>();
 
     /*************************************************************************
      * Set the goal 2 m ahead (static goal, always set to 2 m from the robot);
@@ -319,8 +315,7 @@ void apf_motion_planner::generate_potential_map(const Eigen::MatrixXf& obstacles
              * int thickness=1, int line_type=8, int shift=0, double tipLength=0.1)
              **************************************************************************/
 
-//            cv::arrowedLine(potential_map, cv::Point(x, y), cv::Point(x + velocity.linear.x*1500, y + velocity.linear.y*1500), cv::Scalar(255, 255, 255), 1, 1, 0, 0.1);
-            cv::arrowedLine(potential_map, cv::Point(x, y), cv::Point(x + velocity.linear.x*1500, y + velocity.linear.y*1500)/100, cv::Scalar(255, 255, 255), 1, 1, 0, 0.1);
+            cv::arrowedLine(potential_map, cv::Point(x, y), cv::Point(x + velocity.linear.x*1500, y + velocity.linear.y*1500), cv::Scalar(255, 255, 255), 1, 1, 0, 0.1);
 
         }
     }
