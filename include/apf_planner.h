@@ -36,7 +36,7 @@ public:
 
     void apfCallback(const std_msgs::Float64MultiArray::ConstPtr& obs);
 
-    void generate_potential_map(const Eigen::MatrixXf& obstacles_map);
+    void generate_potential_map(const cv::Mat1f& obstacles_map);
 
     //void odomCallback(const nav_msgs::Odometry latest_odom);
 
@@ -49,8 +49,15 @@ public:
     //compute potential fields
     geometry_msgs::Twist apf(const Eigen::MatrixXf& map_info, float xr, float yr);
 
-    //compute vortex fields
-    geometry_msgs::Twist vortex(const Eigen::MatrixXf& map_info, float xr, float yr);
+    geometry_msgs::Twist attractive_potential(float xgoal, float ygoal, float xrobot, float yrobot);
+
+    geometry_msgs::Twist repulsive_potential(float xr, float yr, float xo, float yo);
+
+    geometry_msgs::Twist vortex_potential(float xr, float yr, float xo, float yo);
+
+    template <typename repulsive_field_function>
+    geometry_msgs::Twist artificial_potental_fields<repulsive_field_function>(const std::vector<ObstacleInfo>& obstacles_array, float xr, float yr);
+
 
     /***************************************************************************
     * Variables for Artificial Potential Fields formula
@@ -86,3 +93,72 @@ protected:
     geometry_msgs::Twist vel_;
 
 };
+
+
+
+
+template <typename repulsive_field_function>
+geometry_msgs::Twist apf_motion_planner::artificial_potental_fields(const std::vector<ObstacleInfo>& obstacles_array, float xr, float yr)
+{
+    /***************************************************************************
+    * Local variables for Artificial Potential Fields formula
+    *
+    ***************************************************************************/
+
+    geometry_msgs::Twist attractive_vel;
+    geometry_msgs::Twist repulsive_vel;
+    geometry_msgs::Twist total_vel;
+
+	double repulsive_potential_x;
+    double repulsive_potential_y;
+    double repulsive_potential_theta;
+
+    double eta_i; //distance from obstacle; etai(q);
+
+    std::vector<cv::Point> obstacle_closest_points(obstacles_array.size());
+
+    Eigen::Vector2f goal(cols/2, 1000);
+
+    /*******************************************************************
+     * chiamata a funzione attractive potential: salvo i dati          *
+     * geometry_msgs::Twist nella variabile attractive_vel;            *
+     *******************************************************************/
+    attractive_vel = attractive_potential(goal.x(), goal.y(), xr, yr);
+
+
+    int o_idx = 0;
+    cv::Point robot_position(xr, yr);
+
+    for(const ObstacleInfo& obstacle : obstacles_array) {
+        double old_distance = std::numeric_limits<double>::max(); //std::static_cast<double>((1 << 31) - 1); //  ~MAX_INT
+
+        for(const cv::Point& obstacle_point : obstacle ) {
+            double new_distance = (obstacle - robot_position).norm();
+
+            if(new_distance < old_distance) {
+                obstacle_closest_points[o_idx] = obstacle_point;
+                old_distance = new_distance;
+            }
+        }
+        ++o_idx;
+    }
+
+     /***********************************************
+     * Repulsive Potential                          *
+     ************************************************/
+     for(const cv::Point& obstacle : obstacle_closest_points) {
+         repulsive_vel += repulsive_field_function(goal.x(), goal.y(), obstacle.x(), obstaceìle.y());
+     }
+
+     //Sommatoria di tutte le forze attrattive + repulsive agenti sulle coordinate
+     total_vel.linear.x  = repulsive_vel.linear.x  + attractive_vel.linear.x;
+     total_vel.linear.y  = repulsive_vel.linear.y  + attractive_vel.linear.y;
+     total_vel.angular.z = repulsive_vel.angular.z + attractive_vel.angular.z;
+
+     ///////////////////////////////////////////////////////////////////////////
+     //Print vel data
+     //std::cerr << vel << '\n';
+     ///////////////////////////////////////////////////////////////////////////
+
+     return total_vel;
+}
