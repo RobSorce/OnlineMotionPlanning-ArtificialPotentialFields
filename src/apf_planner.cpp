@@ -248,8 +248,8 @@ geometry_msgs::Twist apf_motion_planner::vortex(const Eigen::MatrixXf& map_info,
                  repulsive_potential_theta = k_theta * std::atan2(repulsive_potential_x, -repulsive_potential_y);
 
                  //Sommatoria di tutte le forze repulsive agenti sulle coordinate
-                 vel.linear.x  -=  repulsive_potential_y;
-                 vel.linear.y  -= -repulsive_potential_x;
+                 vel.linear.x  -= -repulsive_potential_y;
+                 vel.linear.y  -=  repulsive_potential_x;
                  vel.angular.z -=  repulsive_potential_theta;
 
              }
@@ -277,8 +277,8 @@ void apf_motion_planner::apfCallback(const std_msgs::Float64MultiArray::ConstPtr
     double* obstacles_array = const_cast<double*>(map_info->data.data());
     Eigen::MatrixXf obstacles_map = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(obstacles_array, rows, cols).cast<float>();
 
-    vel_ = apf(obstacles_map, cols/2, 0);
-    //vel_ = vortex(obstacles_map, cols/2.0, 0);
+    //vel_ = apf(obstacles_map, cols/2, 0);
+    vel_ = vortex(obstacles_map, cols/2.0, 0);
     pub_velocity_.publish(vel_);
 
     generate_potential_map(obstacles_map);
@@ -308,7 +308,7 @@ void apf_motion_planner::generate_potential_map(const Eigen::MatrixXf& obstacles
     for (int y = 0; y < obstacles_map.rows(); y += 100) {
         for (int x = 0; x < obstacles_map.cols(); x += 100) {
 
-            velocity = apf(obstacles_map, x, y);
+            velocity = vortex(obstacles_map, x, y);
             //std::cerr<<velocity.linear.x <<" " <<velocity.linear.y <<"\n";
             /***************************************************************************
              * C++: void arrowedLine(Mat& img, Point pt1, Point pt2, const Scalar& color,
