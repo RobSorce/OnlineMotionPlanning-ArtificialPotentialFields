@@ -294,12 +294,12 @@ geometry_msgs::Twist apf_motion_planner::vortex_potential(float xr, float yr, fl
         repulsive_potential_y = 0.0;
     }
 
-    repulsive_potential_theta = k_theta * std::atan2(-repulsive_potential_x, repulsive_potential_y);
+    repulsive_potential_theta = k_theta * std::atan2(repulsive_potential_x, -repulsive_potential_y);
 
     //Sommatoria di tutte le forze repulsive agenti sulle coordinate
 
-    repulsive_vel.linear.x  -=  repulsive_potential_y;
-    repulsive_vel.linear.y  -= -repulsive_potential_x;
+    repulsive_vel.linear.x  -= -repulsive_potential_y;
+    repulsive_vel.linear.y  -=  repulsive_potential_x;
     repulsive_vel.angular.z -=  repulsive_potential_theta;
 
     ////////////////////////////////////////////////////////////////////////////
