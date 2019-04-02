@@ -47,122 +47,6 @@ apf_motion_planner::apf_motion_planner(ros::NodeHandle& nh) :
 
 }
 
-    /****************************************************************
-    * Artificial Potential Fields function (attractive + repulsive) *
-    *****************************************************************/
-
-// geometry_msgs::Twist apf_motion_planner::apf(const Eigen::MatrixXf& map_info, float xr, float yr)
-// {
-// //    std::cerr << "/* error message apf start*/" << '\n';
-//     /***************************************************************************
-//     * Local variables for Artificial Potential Fields formula
-//     *
-//     ***************************************************************************/
-//     geometry_msgs::Twist vel;
-//
-//     double attractive_potential_x;
-//     double attractive_potential_y;
-//     double attractive_potential_theta;
-//
-// 	double repulsive_potential_x;
-//     double repulsive_potential_y;
-//     double repulsive_potential_theta;
-//
-//     double eta_i; //distance from obstacle; etai(q);
-//     double e;     //distance from goal; e(q)
-//
-//     /******************************************************************
-//      * conversione dati contenuti nell'array map_info
-//      * conversione da std_msgs::Float64MultiArray -> Eigen::MatrixXf;
-//      ******************************************************************/
-//
-//     int rows = map_info.rows; //map_info.layout.dim[0].size;
-//     int cols = map_info.cols; //.layout.dim[1].size;
-//
-//     /*************************************************************************
-//      * Set the goal 2 m ahead (static goal, always set to 2 m from the robot);
-//      ************************************************************************/
-//      Eigen::Vector2f goal(cols/2, 1000);
-//      Eigen::Vector2f rtg(goal.x() - xr, goal.y() - yr); //Vettore robot -> goal
-//      e = rtg.norm();
-//
-//      /**********************************************************************
-//       *Attractive Potential
-//       **********************************************************************/
-//      if (e <= rho)
-//      {
-//         /********************************************************************
-//         * Paraboloidal
-//         * Linear force in e, robot behavior near the goal
-//         ********************************************************************/
-//          attractive_potential_x = k_attractive * rtg.x();
-//          attractive_potential_y = k_attractive * rtg.y();
-//      }
-//      else // if(e > rho)
-//      {
-//         /*******************************************************************
-//         * Conical
-//         * Constant force, robot behavior far from the goal
-//         *******************************************************************/
-//          attractive_potential_x = k_attractive * (rtg.x() / e);
-//          attractive_potential_y = k_attractive * (rtg.y() / e);
-//      }
-//
-//      attractive_potential_theta = k_theta * std::atan2(attractive_potential_y, attractive_potential_x);
-//
-//      /**********************************************
-//      * Repulsive Potential
-//      ***********************************************/
-//      for(int x = 0; x < cols; x++) {
-//          for (int y = 0; y < rows; y++) {
-//              if (map_info(x, y) == 1.0f)
-//              {
-//                  /******************************************************
-//                  * Define eta_i: distance between obstacle and MARRtino;
-//                  *******************************************************/
-//
-//                  //Il robot si trova al centro dell'immagine;
-//                  Eigen::Vector2f rto(x - xr, y - yr ); //Vettore robot -> obstacle
-//                  eta_i = rto.norm();
-//
-//                  /******************************************************
-//                  *Repulsive potential formula (gradient)
-//                  *******************************************************/
-//                  if (eta_i <= eta_0)
-//                  {
-//                      repulsive_potential_x = (k_repulsive/pow(eta_i, 2)) * std::pow((1/eta_i - 1/eta_0), gamma - 1) * ( rto.x() / eta_i); //Eigen access to Vector: rto(0)
-//                      repulsive_potential_y = (k_repulsive/pow(eta_i, 2)) * std::pow((1/eta_i - 1/eta_0), gamma - 1) * ( rto.y() / eta_i); //Eigen access to Vector: rto(1)
-//                  }
-//                  else
-//                  { //if(eta_i > eta_0)
-//                      repulsive_potential_x = 0.0;
-//                      repulsive_potential_y = 0.0;
-//                  }
-//
-//                  repulsive_potential_theta = k_theta * std::atan2(repulsive_potential_y, repulsive_potential_x);
-//
-//                  //Sommatoria di tutte le forze repulsive agenti sulle coordinate
-//                  vel.linear.x  -= repulsive_potential_x;
-//                  vel.linear.y  -= repulsive_potential_y;
-//                  vel.angular.z -= repulsive_potential_theta;
-//
-//              }
-//          }
-//      }
-//
-//     //Sommatoria di tutte le forze attrattive agenti sulle coordinate
-//     vel.linear.x  += attractive_potential_x;
-//     vel.linear.y  += attractive_potential_y;
-//     vel.angular.z += attractive_potential_theta;
-//
-//     ////////////////////////////////////////////////////////////////////////
-//     // Print vel data
-//     //std::cerr << vel << '\n';
-//     ////////////////////////////////////////////////////////////////////////
-//     return vel;
-//
-//}
-
     /****************************************************
     * Attractive potential function                    *
     *****************************************************/
@@ -338,7 +222,7 @@ geometry_msgs::Twist apf_motion_planner::potential_fields(const std::vector<Obst
     //int rows = map_info.rows; //map_info.layout.dim[0].size;
     //int cols = map_info.cols; //.layout.dim[1].size;
 
-    Eigen::Vector2f goal(xr, yr); //?
+    Eigen::Vector2f goal(xr, yr + 1000); //?
 
     /*******************************************************************
      * chiamata a funzione attractive potential: salvo i dati          *
@@ -406,7 +290,7 @@ geometry_msgs::Twist apf_motion_planner::vortex_fields(const std::vector<Obstacl
 
     std::vector<cv::Point> obstacle_closest_points(obstacles_array.size());
 
-    Eigen::Vector2f goal(cols/2, 1000);
+    Eigen::Vector2f goal(xr, yr + 1000);
 
     /*******************************************************************
      * chiamata a funzione attractive potential: salvo i dati          *
