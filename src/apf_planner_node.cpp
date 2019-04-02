@@ -7,7 +7,7 @@ int main(int argc, char** argv)
 
     ros::NodeHandle nh;
 
-    apf_motion_planner apf_planner(nh);
+    apf_motion_planner apf_planner(nh, RepulsiveType::VORTEX);
 
     apf_planner.init();
 
