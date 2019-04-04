@@ -1,4 +1,4 @@
-/*
+/******************************************************************************
  * Apf_planner node: Subscribes to /camera/obstacles2D defined in
  * obstacles_mapper_2d and compute the repulsive fields around an obstacle
  * (pixel = 1.0f in the obstacle matrix);
@@ -8,10 +8,9 @@
  *
  * Publishes data on topic /cmd_vel, sends infos about velocity, Odometry
  * moves the robot
- */
+ ******************************************************************************/
 
 #include <../include/apf_planner.h>
-#include <limits>
 
     /*########################################################################
      * Inizializzazione lista parametri del costruttore
@@ -47,9 +46,9 @@ apf_motion_planner::apf_motion_planner(ros::NodeHandle& nh, RepulsiveType r_type
 
 }
 
-/****************************************************
- * Attractive potential function                    *
-*****************************************************/
+    /****************************************************
+     * Attractive potential function                    *
+    *****************************************************/
 
 geometry_msgs::Twist apf_motion_planner::attractive_potential(float xgoal, float ygoal, float xrobot, float yrobot)
 {
@@ -62,28 +61,28 @@ geometry_msgs::Twist apf_motion_planner::attractive_potential(float xgoal, float
 
     double e;     //distance from goal; e(q)
 
-    Eigen::Vector2f rtg(xgoal - xrobot, ygoal - yrobot); //Vettore robot -> goal
-    rtg = (rtg / 100).eval();
+    Eigen::Vector2f rtg(xgoal - xrobot, ygoal - yrobot); //Vector robot -> goal
+    rtg = (rtg / 100).eval(); //UNIT = meters;
     e = rtg.norm();
 
-    /**********************************************************************
-     *Attractive Potential
-     **********************************************************************/
+    /*************************************
+     *Attractive Potential               *
+     ************************************/
     if (e <= rho)
     {
-       /********************************************************************
-       * Paraboloidal
-       * Linear force in e, robot behavior near the goal
-       ********************************************************************/
+       /***************************************************
+       * Paraboloidal                                     *
+       * Linear force in e, robot behavior near the goal  *
+       ***************************************************/
         attractive_potential_x = k_attractive * rtg.x();
         attractive_potential_y = k_attractive * rtg.y();
     }
     else // if(e > rho)
     {
-       /*******************************************************************
-       * Conical
-       * Constant force, robot behavior far from the goal
-       *******************************************************************/
+       /***************************************************
+       * Conical                                          *
+       * Constant force, robot behavior far from the goal *
+       ***************************************************/
         attractive_potential_x = k_attractive * (rtg.x() / e);
         attractive_potential_y = k_attractive * (rtg.y() / e);
     }
@@ -97,16 +96,16 @@ geometry_msgs::Twist apf_motion_planner::attractive_potential(float xgoal, float
 
     ////////////////////////////////////////////////////////////////////////////
     // Print vel data
-    //std::cerr << vel << '\n';
+    // ROS_INFO("Attractive velocity data: %f", attractive_vel);
     ////////////////////////////////////////////////////////////////////////////
 
     return attractive_vel;
 
 }
 
-/******************************************************
-*Repulsive Potential function                         *
-*******************************************************/
+    /******************************************************
+    *Repulsive Potential function                         *
+    ******************************************************/
 geometry_msgs::Twist apf_motion_planner::repulsive_potential(float xr, float yr, float xo, float yo)
 {
     geometry_msgs::Twist repulsive_vel;
@@ -117,12 +116,12 @@ geometry_msgs::Twist apf_motion_planner::repulsive_potential(float xr, float yr,
 
     double eta_i; //distance from obstacle; etai(q);
 
-    //Il robot si trova al centro dell'immagine;
+    //MARRtino is in the center of the image: matrix(cols/2);
     Eigen::Vector2f rto(xo - xr, yo - yr); //Vettore robot -> obstacle
-    eta_i = rto.norm() / 100;
+    eta_i = rto.norm() / 100; //UNIT = meters;
 
-    /******************************************************
-    *Repulsive potential formula (gradient)
+    /*******************************************************
+    *Repulsive potential formula (gradient)                *
     *******************************************************/
     if (eta_i <= eta_0)
     {
@@ -138,23 +137,22 @@ geometry_msgs::Twist apf_motion_planner::repulsive_potential(float xr, float yr,
     repulsive_potential_theta = k_theta * std::atan2(repulsive_potential_y, repulsive_potential_x);
 
     //Sommatoria di tutte le forze repulsive agenti sulle coordinate
-
     repulsive_vel.linear.x  -= repulsive_potential_x;
     repulsive_vel.linear.y  -= repulsive_potential_y;
     repulsive_vel.angular.z -= repulsive_potential_theta;
 
     ////////////////////////////////////////////////////////////////////////////
     // Print vel data
-    //std::cerr << vel << '\n';
+    // ROS_INFO("Repulsive Velocity data: %f", repulsive_vel);
     ////////////////////////////////////////////////////////////////////////////
 
     return repulsive_vel;
 }
 
 
-/******************************************************
-*Vo rtex Potential function                         *
-*******************************************************/
+    /***************************************************
+    * Vortex Potential function                        *
+    ***************************************************/
 geometry_msgs::Twist apf_motion_planner::vortex_potential(float xr, float yr, float xo, float yo)
 {
     geometry_msgs::Twist repulsive_vel;
@@ -165,13 +163,13 @@ geometry_msgs::Twist apf_motion_planner::vortex_potential(float xr, float yr, fl
 
     double eta_i; //distance from obstacle; etai(q);
 
-    //Il robot si trova al centro dell'immagine;
-    Eigen::Vector2f rto(xo - xr, yo - yr); //Vettore robot -> obstacle
-    eta_i = rto.norm() / 100;
+    //MARRtino is in the center of the image: matrix(cols/2);
+    Eigen::Vector2f rto(xo - xr, yo - yr); //Vector robot -> obstacle
+    eta_i = rto.norm() / 100; //UNIT = meters;
 
-    /******************************************************
-    *Repulsive potential formula (gradient)
-    *******************************************************/
+    /************************************************
+    *Repulsive potential formula (gradient)         *
+    ************************************************/
     if (eta_i <= eta_0)
     {
         repulsive_potential_x = (k_repulsive/pow(eta_i, 2)) * std::pow((1/eta_i - 1/eta_0), gamma - 1) * ( rto.x() / eta_i); //Eigen access to Vector: rto(0)
@@ -186,16 +184,13 @@ geometry_msgs::Twist apf_motion_planner::vortex_potential(float xr, float yr, fl
     repulsive_potential_theta = k_theta * std::atan2(repulsive_potential_x, -repulsive_potential_y);
 
     //Sommatoria di tutte le forze repulsive agenti sulle coordinate
-
     repulsive_vel.linear.x  -= -repulsive_potential_y;
     repulsive_vel.linear.y  -=  repulsive_potential_x;
     repulsive_vel.angular.z -=  repulsive_potential_theta;
 
-    //std::cerr <<"Repulsive Vel: " <<repulsive_vel <<"\n";
-
     ////////////////////////////////////////////////////////////////////////////
     // Print vel data
-    //std::cerr << vel << '\n';
+    // ROS_INFO("Repulsive Velocity data: %f", repulsive_vel);
     ////////////////////////////////////////////////////////////////////////////
 
     return repulsive_vel;
@@ -217,14 +212,12 @@ std::vector<ObstacleInfo> extractObstaclesInfo(const cv::Mat& obstacles_map, int
     return vec;
 }
 
-
-
-geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::vector<ObstacleInfo>& obstacles_array, float xr, float yr)
+geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::vector<ObstacleInfo>& obstacles_array, float xr, float yr, float xg, float yg)
 {
-    /***************************************************************************
-    * Local variables for Artificial Potential Fields formula
-    *
-    ***************************************************************************/
+    /*******************************************************************
+    * Local variables for Artificial Potential Fields formula          *
+    *                                                                  *
+    *******************************************************************/
 
     geometry_msgs::Twist attractive_vel;
     geometry_msgs::Twist repulsive_vel;
@@ -236,14 +229,13 @@ geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::
 
     std::vector<cv::Point> obstacle_closest_points(obstacles_array.size());
 
-    Eigen::Vector2f goal(600, 1000);
+    Eigen::Vector2f goal(xg, yg);
 
     /*******************************************************************
-     * chiamata a funzione attractive potential: salvo i dati          *
-     * geometry_msgs::Twist nella variabile attractive_vel;            *
-     *******************************************************************/
+     * chiamata a funzione attractive potential: stores data           *
+     * geometry_msgs::Twist in variable attractive_vel;                *
+     ******************************************************************/
     attractive_vel = attractive_potential(goal.x(), goal.y(), xr, yr);
-
 
     int o_idx = 0;
     cv::Point robot_position(xr, yr);
@@ -293,7 +285,7 @@ geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::
 
      ///////////////////////////////////////////////////////////////////////////
      //Print vel data
-     //ROS_INFO("Velocity values: %f", vel);
+     //ROS_INFO("Total Velocity values: %f", total_vel);
      ///////////////////////////////////////////////////////////////////////////
 
      return total_vel;
@@ -306,36 +298,24 @@ void apf_motion_planner::apfCallback(const std_msgs::Float64MultiArray::ConstPtr
 {
     cv::Mat obstacles_map_cv;         //matrice degli ostacoli dove salvo i dati std_msgs::Float64MultiArray;
     cv::Mat labeled_obstacles_map;    //matrice degli ostacoli labeled;
-    cv::Mat converted2, converted;
+    cv::Mat converted;
 
     int num_obstacles;
     int rows = map_info->layout.dim[0].size;
     int cols = map_info->layout.dim[1].size;
 
-    //double* obstacles_array = const_cast<double*>(map_info->data.data());
-    //Eigen::MatrixXf obstacles_map_eigen = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(obstacles_array, rows, cols).cast<float>();
-
-
     obstacles_map_cv = cv::Mat1d(rows, cols, const_cast<double*>(map_info->data.data())); //genero la matrice degli ostacoli OpenCV <- map_info
     obstacles_map_cv.convertTo(converted, CV_8U);
-
-    // cv::threshold(converted2, converted, 0, 1, cv::THRESH_BINARY);
-    // std::cerr << "/*3 error message threshold */" <<converted <<'\n';
 
     num_obstacles = cv::connectedComponents(converted, labeled_obstacles_map, 8, CV_32S, cv::CCL_GRANA); //ritorna il numero di ostacoli, setta il vettore output labeled_obstacles_map
 
     std::vector<ObstacleInfo> obstacles = extractObstaclesInfo(labeled_obstacles_map, num_obstacles); //std::vector<std::vector<cv::Point>>
 
-    // //chiamata a funzione artificial_potential_fields; salva il risultato in vel_;
-    vel_ = artificial_potential_fields(obstacles, cols/2, 0);
-    //
-    // std::cerr << "/*6 error message pub_velocity_*/" << '\n';
+    //chiamata a funzione artificial_potential_fields; salva il risultato in vel_;
+    vel_ = artificial_potential_fields(obstacles, cols/2, 0, cols/2, 500); //1/2 meter
     pub_velocity_.publish(vel_);
-    //
-    // std::cerr << "/*7 error message generate_potential_map*/" << '\n';
+
     generate_potential_map(obstacles_map_cv, obstacles);
-    //
-    // std::cerr << "/*8 error message end apfCallback */" << '\n';
 }
 
     /***************************************************************************
@@ -355,14 +335,9 @@ void apf_motion_planner::generate_potential_map(const cv::Mat& obstacles_map, co
     for (int y = 0; y < obstacles_map.rows; y+=50) {
         for (int x = 0; x < obstacles_map.cols; x+=50) {
 
-            velocity = artificial_potential_fields(obstacles, x, y);
+            velocity = artificial_potential_fields(obstacles, x, y, (obstacles_map.cols/2), 500);
 
-            /*****************************************************************************
-             * C++: void arrowedLine(Mat& img, Point pt1, Point pt2, const Scalar& color,*
-             * int thickness=1, int line_type=8, int shift=0, double tipLength=0.1)      *
-             ****************************************************************************/
-
-            cv::arrowedLine(potential_map, cv::Point(x, y), cv::Point(x + velocity.linear.x, y + velocity.linear.y), cv::Scalar(255, 255, 0), 1, 1, 0, 0.1);
+            cv::arrowedLine(potential_map, cv::Point(x, y), cv::Point(x + velocity.linear.x, y + velocity.linear.y), cv::Scalar(255, 255, 255), 1, 1, 0, 0.1);
         }
     }
 
