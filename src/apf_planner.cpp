@@ -35,11 +35,11 @@
 
 apf_motion_planner::apf_motion_planner(ros::NodeHandle& nh, RepulsiveType r_type) :
 
-    k_attractive(0.01),
-    k_repulsive(1000.0),
+    k_attractive(25),
+    k_repulsive(0.0025),
     k_theta(0.1),
     gamma(2),
-    eta_0(300),
+    eta_0(3),
     rho(1.0),
     r_type(r_type),
     nh_(nh)
@@ -63,6 +63,7 @@ geometry_msgs::Twist apf_motion_planner::attractive_potential(float xgoal, float
     double e;     //distance from goal; e(q)
 
     Eigen::Vector2f rtg(xgoal - xrobot, ygoal - yrobot); //Vettore robot -> goal
+    rtg = (rtg / 100).eval();
     e = rtg.norm();
 
     /**********************************************************************
@@ -118,7 +119,7 @@ geometry_msgs::Twist apf_motion_planner::repulsive_potential(float xr, float yr,
 
     //Il robot si trova al centro dell'immagine;
     Eigen::Vector2f rto(xo - xr, yo - yr); //Vettore robot -> obstacle
-    eta_i = rto.norm();
+    eta_i = rto.norm() / 100;
 
     /******************************************************
     *Repulsive potential formula (gradient)
@@ -166,7 +167,7 @@ geometry_msgs::Twist apf_motion_planner::vortex_potential(float xr, float yr, fl
 
     //Il robot si trova al centro dell'immagine;
     Eigen::Vector2f rto(xo - xr, yo - yr); //Vettore robot -> obstacle
-    eta_i = rto.norm();
+    eta_i = rto.norm() / 100;
 
     /******************************************************
     *Repulsive potential formula (gradient)
@@ -190,6 +191,8 @@ geometry_msgs::Twist apf_motion_planner::vortex_potential(float xr, float yr, fl
     repulsive_vel.linear.y  -=  repulsive_potential_x;
     repulsive_vel.angular.z -=  repulsive_potential_theta;
 
+    //std::cerr <<"Repulsive Vel: " <<repulsive_vel <<"\n";
+
     ////////////////////////////////////////////////////////////////////////////
     // Print vel data
     //std::cerr << vel << '\n';
@@ -200,7 +203,7 @@ geometry_msgs::Twist apf_motion_planner::vortex_potential(float xr, float yr, fl
 
 std::vector<ObstacleInfo> extractObstaclesInfo(const cv::Mat& obstacles_map, int num_obstacles)
 {
-    std::vector<ObstacleInfo> vec(num_obstacles);
+    std::vector<ObstacleInfo> vec(num_obstacles-1);
 
     for (int row = 0; row < obstacles_map.rows; row++) {
         for (int col = 0; col < obstacles_map.cols; col++) {
@@ -233,7 +236,7 @@ geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::
 
     std::vector<cv::Point> obstacle_closest_points(obstacles_array.size());
 
-    Eigen::Vector2f goal(xr, yr + 1000);
+    Eigen::Vector2f goal(600, 1000);
 
     /*******************************************************************
      * chiamata a funzione attractive potential: salvo i dati          *
@@ -260,6 +263,10 @@ geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::
         ++o_idx;
     }
 
+    // std::cerr <<"Closest point:\n";
+    // for(const auto& point : obstacle_closest_points)
+    //     std::cerr <<point <<"\n";
+
      /*******************************************************
      * Repulsive field on closest points (one for obstacle) *
      *******************************************************/
@@ -267,10 +274,10 @@ geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::
      for(const cv::Point& obstacle : obstacle_closest_points) {
          switch (r_type) {
             case RepulsiveType::REPULSIVE:
-                point_vel = repulsive_potential(goal.x(), goal.y(), obstacle.x, obstacle.y);
+                point_vel = repulsive_potential(xr, yr, obstacle.x, obstacle.y);
                 break;
             case RepulsiveType::VORTEX:
-                point_vel = vortex_potential(goal.x(), goal.y(), obstacle.x, obstacle.y);
+                point_vel = vortex_potential(xr, yr, obstacle.x, obstacle.y);
                 break;
         }
 
@@ -280,13 +287,13 @@ geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::
      }
 
      //Sommatoria di tutte le forze attrattive + repulsive agenti sulle coordinate
-     total_vel.linear.x  = repulsive_vel.linear.x  + attractive_vel.linear.x;
-     total_vel.linear.y  = repulsive_vel.linear.y  + attractive_vel.linear.y;
+     total_vel.linear.x  = repulsive_vel.linear.x + attractive_vel.linear.x;
+     total_vel.linear.y  = repulsive_vel.linear.y + attractive_vel.linear.y;
      total_vel.angular.z = repulsive_vel.angular.z + attractive_vel.angular.z;
 
      ///////////////////////////////////////////////////////////////////////////
      //Print vel data
-     //std::cerr << vel << '\n';
+     //ROS_INFO("Velocity values: %f", vel);
      ///////////////////////////////////////////////////////////////////////////
 
      return total_vel;
@@ -297,65 +304,65 @@ geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::
 
 void apf_motion_planner::apfCallback(const std_msgs::Float64MultiArray::ConstPtr& map_info)
 {
-    cv::Mat obstacles_map;         //matrice degli ostacoli dove salvo i dati std_msgs::Float64MultiArray;
-    cv::Mat labeled_obstacles_map; //matrice degli ostacoli labeled;
+    cv::Mat obstacles_map_cv;         //matrice degli ostacoli dove salvo i dati std_msgs::Float64MultiArray;
+    cv::Mat labeled_obstacles_map;    //matrice degli ostacoli labeled;
+    cv::Mat converted2, converted;
 
     int num_obstacles;
     int rows = map_info->layout.dim[0].size;
     int cols = map_info->layout.dim[1].size;
 
-    obstacles_map = cv::Mat1d(rows, cols, const_cast<double*>(map_info->data.data())); //genero la matrice degli ostacoli OpenCV <- map_info
-    std::cerr << "/* error message1 */" << '\n';
-    cv::Mat converted2, converted;
-    std::cerr << "/* error message2 */" << '\n';
-    obstacles_map.convertTo(converted2, CV_8U);
-    std::cerr << "/* error message3 */" << '\n';
-    cv::threshold(converted2, converted, 1, 1, cv::THRESH_BINARY);
-    std::cerr << "/* error message4 */" << '\n';
-    //obstacles_map.convertTo(converted, CV_8U);
-    //obstacles_map.convertTo()
+    //double* obstacles_array = const_cast<double*>(map_info->data.data());
+    //Eigen::MatrixXf obstacles_map_eigen = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(obstacles_array, rows, cols).cast<float>();
 
-    num_obstacles = cv::connectedComponents(converted, labeled_obstacles_map, 8, CV_32S);   //ritorna il numero di ostacoli
-    std::cerr << "/* error message  connectedComponents*/" << '\n';
+
+    obstacles_map_cv = cv::Mat1d(rows, cols, const_cast<double*>(map_info->data.data())); //genero la matrice degli ostacoli OpenCV <- map_info
+    obstacles_map_cv.convertTo(converted, CV_8U);
+
+    // cv::threshold(converted2, converted, 0, 1, cv::THRESH_BINARY);
+    // std::cerr << "/*3 error message threshold */" <<converted <<'\n';
+
+    num_obstacles = cv::connectedComponents(converted, labeled_obstacles_map, 8, CV_32S, cv::CCL_GRANA); //ritorna il numero di ostacoli, setta il vettore output labeled_obstacles_map
+
     std::vector<ObstacleInfo> obstacles = extractObstaclesInfo(labeled_obstacles_map, num_obstacles); //std::vector<std::vector<cv::Point>>
-    std::cerr << "/* error message 5*/" << '\n';
+
+    // //chiamata a funzione artificial_potential_fields; salva il risultato in vel_;
     vel_ = artificial_potential_fields(obstacles, cols/2, 0);
-
-    std::cerr << "/* error message 6*/" << '\n';
-    //vel_ = vortex(obstacles_map, cols/2.0, 0);
+    //
+    // std::cerr << "/*6 error message pub_velocity_*/" << '\n';
     pub_velocity_.publish(vel_);
-
-    std::cerr << "/* error message 7*/" << '\n';
-    generate_potential_map(labeled_obstacles_map);
-
-    std::cerr << "/* error message end */" << '\n';
+    //
+    // std::cerr << "/*7 error message generate_potential_map*/" << '\n';
+    generate_potential_map(obstacles_map_cv, obstacles);
+    //
+    // std::cerr << "/*8 error message end apfCallback */" << '\n';
 }
 
-    /**************************************************************************
-     * Generates and shows the potential field map: shows the direction of the
-     * potential fields acting on each pixel of the map using arrows;
-     *
-     * UNCOMMENT to show the potential field map;
+    /***************************************************************************
+     * Generates and shows the potential field map: shows the direction of the *
+     * potential fields acting on each pixel of the map using arrows;          *
+     *                                                                         *
+     * UNCOMMENT to show the potential field map;                              *
      **************************************************************************/
 
-void apf_motion_planner::generate_potential_map(const cv::Mat1f& obstacles_map)
+void apf_motion_planner::generate_potential_map(const cv::Mat& obstacles_map, const std::vector<ObstacleInfo>& obstacles)
 {
-    std::cerr << "/* error message map*/" << '\n';
+
     geometry_msgs::Twist velocity;
+
     cv::Mat potential_map = obstacles_map;
-    std::cerr << "/* error message map 2*/" << '\n';
-    for (int y = 0; y < obstacles_map.rows; y += 100) {
-        for (int x = 0; x < obstacles_map.cols; x += 100) {
-std::cerr << "/* error message map loop*/" << '\n';
-            velocity = artificial_potential_fields(obstacles_map, x, y);
-std::cerr << "/* error message map loop end*/" << '\n';
-            /***************************************************************************
-             * C++: void arrowedLine(Mat& img, Point pt1, Point pt2, const Scalar& color,
-             * int thickness=1, int line_type=8, int shift=0, double tipLength=0.1)
-             **************************************************************************/
-            cv::arrowedLine(potential_map, cv::Point(x, y), cv::Point(x + velocity.linear.x*1500, y + velocity.linear.y*1500), cv::Scalar(255, 255, 255), 1, 1, 0, 0.1);
-            //cv::arrowedLine(potential_map, cv::Point(x, y), cv::Point(x + velocity.linear.x*1500, y + velocity.linear.y*1500)/100, cv::Scalar(255, 255, 255), 1, 1, 0, 0.1);
-std::cerr << "/* error message map END */" << '\n';
+
+    for (int y = 0; y < obstacles_map.rows; y+=50) {
+        for (int x = 0; x < obstacles_map.cols; x+=50) {
+
+            velocity = artificial_potential_fields(obstacles, x, y);
+
+            /*****************************************************************************
+             * C++: void arrowedLine(Mat& img, Point pt1, Point pt2, const Scalar& color,*
+             * int thickness=1, int line_type=8, int shift=0, double tipLength=0.1)      *
+             ****************************************************************************/
+
+            cv::arrowedLine(potential_map, cv::Point(x, y), cv::Point(x + velocity.linear.x, y + velocity.linear.y), cv::Scalar(255, 255, 0), 1, 1, 0, 0.1);
         }
     }
 

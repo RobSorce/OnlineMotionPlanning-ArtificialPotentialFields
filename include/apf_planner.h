@@ -39,7 +39,7 @@ public:
 
     void apfCallback(const std_msgs::Float64MultiArray::ConstPtr& obs);
 
-    void generate_potential_map(const cv::Matif& obstacles_map);
+    void generate_potential_map(const cv::Mat& obstacles_map, const std::vector<ObstacleInfo>& obstacles);
 
     //initialize publisher/subscriber
     void init();
