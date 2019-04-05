@@ -10,7 +10,6 @@
 #include <opencv2/core/core.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core/eigen.hpp>
-//#include <DepthImageToLaserScan.h>
 #include <sensor_msgs/LaserScan.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
@@ -25,7 +24,6 @@
 #include <eigen_conversions/eigen_msg.h>
 //#include <pcl/visualization/cloud_viewer.h>
 #include <pcl_conversions/pcl_conversions.h>
-//#include <pointcloud_to_laserscan_nodelet.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/visualization/point_cloud_color_handlers.h>
 

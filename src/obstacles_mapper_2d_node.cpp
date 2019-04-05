@@ -11,7 +11,7 @@ int main(int argc, char** argv)
 
     /*******************************
      * Modify resolution parameters
-     * Unit = milimeters;
+     * Unit = millimeters;
      *******************************/
 
     obstacles_mapper_2d.cell_dimension_mm = 10;

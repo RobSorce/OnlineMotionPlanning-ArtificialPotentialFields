@@ -1,17 +1,18 @@
 /*
  * obstacles_mapper_2d Node:
  * Subscribes to /camera/depth/points topic to gather PointCloud2 messages
- * (Reads pointcloud from the Microsoft Kinect sensor) and
- * publishes PointCloud2 messages on another topic /camera/filtered_points
+ * (Obtain a pointcloud from the Microsoft Kinect sensor), converts
+ * PointCloud2 messages into std_msgs::Float64MultiArray and publishes data
+ * on another topic /camera/obstacles2D;
  *
- * messages from that topic will be read by pointcloud_to_laserscan_node node
- * in order to be converted in sensor_msgs::LaserScan
- *
+ * messages from that topic will be read by apf_planner node
+ * in order to compute artificial potential fields around obstacles and properly
+ * set a goal to be reached;
  */
 
 #include <../include/obstacles_mapper_2d.h>
 
-    /*
+    /*#########################################################################
      * Inizializzazione lista parametri del costruttore
      * Nota: dichiarazione parametri esattamente nell'ordine in cui sono stati
      *       definiti nella classe; Altrimenti genera errore a run-time;
@@ -19,6 +20,7 @@
      * Caveat: Inizializzazione lista atttributi della classe, piuttosto che
      *         dentro il corpo del costruttore, così da evitare ulteriore
      *         inizializzazione di default ridondante;
+     *#########################################################################
     */
 
 obstacles_mapper_2d::obstacles_mapper_2d(ros::NodeHandle& nh) :
@@ -93,8 +95,7 @@ void obstacles_mapper_2d::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& 
  */
     int side_sight_mm = 5000;
 
-    // map size parameters (computed based on resolutions and sight)
-    // std::cerr <<"step\n";
+    //map size parameters (computed based on resolutions and sight)
     int cols = desired_width_mm / cell_dimension_mm; //1000;
     int rows = desired_depth_mm / cell_dimension_mm; //400;
 
@@ -113,7 +114,7 @@ void obstacles_mapper_2d::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& 
         //minxc = std::min(minxc, xc);
         //minzc = std::min(minzc, zc);
 
-        //controllo out of bounds
+        //check bounds
 
         if (xc >= cols || zc >= rows)
             continue;
@@ -123,10 +124,8 @@ void obstacles_mapper_2d::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& 
         mat(zc, xc) = 1.0f;
     }
 
-    //std::cerr <<"END STEP1 " <<minxc <<" " <<minzc << "\n";
-
-    //Visualizza la matrice degli ostacoli;
-    //UNCOMMENT to visualize the output obstacle map
+    //Visualize obstacle matrix;
+    //UNCOMMENT to visualize the output obstacle map;
     ///////////////////////////////////////////////////////////////////////////
     cv::Mat1b cvMat(rows, cols);
     cv::eigen2cv(mat, cvMat);

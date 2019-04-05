@@ -46,8 +46,8 @@ apf_motion_planner::apf_motion_planner(ros::NodeHandle& nh, RepulsiveType r_type
 
 }
 
-    /****************************************************
-     * Attractive potential function                    *
+    /*****************************************************
+     * Attractive potential function                     *
     *****************************************************/
 
 geometry_msgs::Twist apf_motion_planner::attractive_potential(float xgoal, float ygoal, float xrobot, float yrobot)
@@ -196,6 +196,11 @@ geometry_msgs::Twist apf_motion_planner::vortex_potential(float xr, float yr, fl
     return repulsive_vel;
 }
 
+    /********************************************************************
+     * extractObstaclesInfo function:
+     * aggregates obstacles pixel to create an obstacle;
+     *******************************************************************/
+
 std::vector<ObstacleInfo> extractObstaclesInfo(const cv::Mat& obstacles_map, int num_obstacles)
 {
     std::vector<ObstacleInfo> vec(num_obstacles-1);
@@ -232,8 +237,7 @@ geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::
     Eigen::Vector2f goal(xg, yg);
 
     /*******************************************************************
-     * chiamata a funzione attractive potential: stores data           *
-     * geometry_msgs::Twist in variable attractive_vel;                *
+     * function call attractive potential                              *
      ******************************************************************/
     attractive_vel = attractive_potential(goal.x(), goal.y(), xr, yr);
 
@@ -279,8 +283,8 @@ geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::
      }
 
      //Sommatoria di tutte le forze attrattive + repulsive agenti sulle coordinate
-     total_vel.linear.x  = repulsive_vel.linear.x + attractive_vel.linear.x;
-     total_vel.linear.y  = repulsive_vel.linear.y + attractive_vel.linear.y;
+     total_vel.linear.x  = repulsive_vel.linear.x  + attractive_vel.linear.x;
+     total_vel.linear.y  = repulsive_vel.linear.y  + attractive_vel.linear.y;
      total_vel.angular.z = repulsive_vel.angular.z + attractive_vel.angular.z;
 
      ///////////////////////////////////////////////////////////////////////////
