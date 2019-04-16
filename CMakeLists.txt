@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   eigen_conversions
+  tf
 )
 
 find_package(OpenCV REQUIRED)

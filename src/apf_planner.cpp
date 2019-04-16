@@ -1,13 +1,12 @@
 /******************************************************************************
  * Apf_planner node: Subscribes to /camera/obstacles2D defined in
  * obstacles_mapper_2d and compute the repulsive fields around an obstacle
- * (pixel = 1.0f in the obstacle matrix);
+ * (group of pixels = 1.0f in the obstacle matrix);
  *
  * Subscribes to /goalgenerator defined in goal_generator node
  * to set the goal to reach and compute the attractive field around the goal;
  *
- * Publishes data on topic /cmd_vel, sends infos about velocity, Odometry
- * moves the robot
+ * Publishes data on topic /cmd_vel, sends velocity data to move the robot
  ******************************************************************************/
 
 #include <../include/apf_planner.h>
@@ -34,11 +33,11 @@
 
 apf_motion_planner::apf_motion_planner(ros::NodeHandle& nh, RepulsiveType r_type) :
 
-    k_attractive(25),
-    k_repulsive(0.0025),
+    k_attractive(0.25),
+    k_repulsive(0.0027),
     k_theta(0.1),
     gamma(2),
-    eta_0(3),
+    eta_0(1),
     rho(1.0),
     r_type(r_type),
     nh_(nh)
@@ -87,16 +86,16 @@ geometry_msgs::Twist apf_motion_planner::attractive_potential(float xgoal, float
         attractive_potential_y = k_attractive * (rtg.y() / e);
     }
 
-    attractive_potential_theta = k_theta * std::atan2(attractive_potential_y, attractive_potential_x);
+    attractive_potential_theta = k_theta * std::atan2(attractive_potential_x, attractive_potential_y); //swap x e y
 
     //Sommatoria di tutte le forze attrattive agenti sulle coordinate
-    attractive_vel.linear.x  = attractive_potential_x;
-    attractive_vel.linear.y  = attractive_potential_y;
+    attractive_vel.linear.y  = attractive_potential_x; //da modificare swap x e y
+    attractive_vel.linear.x  = attractive_potential_y; //swap x e y
     attractive_vel.angular.z = attractive_potential_theta;
 
     ////////////////////////////////////////////////////////////////////////////
     // Print vel data
-    // ROS_INFO("Attractive velocity data: %f", attractive_vel);
+    // std::cerr << "Attractive vel: \n" << attractive_vel   << '\n';
     ////////////////////////////////////////////////////////////////////////////
 
     return attractive_vel;
@@ -104,7 +103,7 @@ geometry_msgs::Twist apf_motion_planner::attractive_potential(float xgoal, float
 }
 
     /******************************************************
-    *Repulsive Potential function                         *
+    * Repulsive Potential function                         *
     ******************************************************/
 geometry_msgs::Twist apf_motion_planner::repulsive_potential(float xr, float yr, float xo, float yo)
 {
@@ -134,21 +133,20 @@ geometry_msgs::Twist apf_motion_planner::repulsive_potential(float xr, float yr,
         repulsive_potential_y = 0.0;
     }
 
-    repulsive_potential_theta = k_theta * std::atan2(repulsive_potential_y, repulsive_potential_x);
+    repulsive_potential_theta = k_theta * std::atan2(repulsive_potential_x, repulsive_potential_y);
 
     //Sommatoria di tutte le forze repulsive agenti sulle coordinate
-    repulsive_vel.linear.x  -= repulsive_potential_x;
-    repulsive_vel.linear.y  -= repulsive_potential_y;
+    repulsive_vel.linear.y  -= repulsive_potential_x; //swap x e y
+    repulsive_vel.linear.x  -= repulsive_potential_y;
     repulsive_vel.angular.z -= repulsive_potential_theta;
 
     ////////////////////////////////////////////////////////////////////////////
     // Print vel data
-    // ROS_INFO("Repulsive Velocity data: %f", repulsive_vel);
+    // std::cerr << "repulsive vel: \n" << repulsive_vel << '\n';
     ////////////////////////////////////////////////////////////////////////////
 
     return repulsive_vel;
 }
-
 
     /***************************************************
     * Vortex Potential function                        *
@@ -181,16 +179,16 @@ geometry_msgs::Twist apf_motion_planner::vortex_potential(float xr, float yr, fl
         repulsive_potential_y = 0.0;
     }
 
-    repulsive_potential_theta = k_theta * std::atan2(repulsive_potential_x, -repulsive_potential_y);
+    repulsive_potential_theta = k_theta * std::atan2(-repulsive_potential_x, repulsive_potential_y); //inverted x y
 
     //Sommatoria di tutte le forze repulsive agenti sulle coordinate
-    repulsive_vel.linear.x  -= -repulsive_potential_y;
-    repulsive_vel.linear.y  -=  repulsive_potential_x;
+    repulsive_vel.linear.y  -= -repulsive_potential_x;  //inverted x y
+    repulsive_vel.linear.x  -=  repulsive_potential_y; //inverted x y
     repulsive_vel.angular.z -=  repulsive_potential_theta;
 
     ////////////////////////////////////////////////////////////////////////////
     // Print vel data
-    // ROS_INFO("Repulsive Velocity data: %f", repulsive_vel);
+    // std::cerr << "repulsive vel: \n" << repulsive_vel << '\n';
     ////////////////////////////////////////////////////////////////////////////
 
     return repulsive_vel;
@@ -198,7 +196,7 @@ geometry_msgs::Twist apf_motion_planner::vortex_potential(float xr, float yr, fl
 
     /********************************************************************
      * extractObstaclesInfo function:
-     * aggregates obstacles pixel to create an obstacle;
+     * group obstacles pixel to create an obstacle;
      *******************************************************************/
 
 std::vector<ObstacleInfo> extractObstaclesInfo(const cv::Mat& obstacles_map, int num_obstacles)
@@ -237,8 +235,8 @@ geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::
     Eigen::Vector2f goal(xg, yg);
 
     /*******************************************************************
-     * function call attractive potential                              *
-     ******************************************************************/
+    * function call attractive potential                               *
+    *******************************************************************/
     attractive_vel = attractive_potential(goal.x(), goal.y(), xr, yr);
 
     int o_idx = 0;
@@ -261,7 +259,7 @@ geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::
 
     // std::cerr <<"Closest point:\n";
     // for(const auto& point : obstacle_closest_points)
-    //     std::cerr <<point <<"\n";
+    //     std::cerr << point <<"\n";
 
      /*******************************************************
      * Repulsive field on closest points (one for obstacle) *
@@ -289,14 +287,14 @@ geometry_msgs::Twist apf_motion_planner::artificial_potential_fields(const std::
 
      ///////////////////////////////////////////////////////////////////////////
      //Print vel data
-     //ROS_INFO("Total Velocity values: %f", total_vel);
+     //
+      std::cerr << "Total velocity: \n" << total_vel << '\n';
+      // std::cerr << "ANGULAR DEGREES: " << '\n';
+      // std::cerr << "angular z = " << total_vel.angular.z * (180 / 3.14159265) << '\n';
      ///////////////////////////////////////////////////////////////////////////
 
      return total_vel;
 }
-
-
-
 
 void apf_motion_planner::apfCallback(const std_msgs::Float64MultiArray::ConstPtr& map_info)
 {
@@ -342,6 +340,7 @@ void apf_motion_planner::generate_potential_map(const cv::Mat& obstacles_map, co
             velocity = artificial_potential_fields(obstacles, x, y, (obstacles_map.cols/2), 500);
 
             cv::arrowedLine(potential_map, cv::Point(x, y), cv::Point(x + velocity.linear.x, y + velocity.linear.y), cv::Scalar(255, 255, 255), 1, 1, 0, 0.1);
+
         }
     }
 
@@ -350,31 +349,9 @@ void apf_motion_planner::generate_potential_map(const cv::Mat& obstacles_map, co
 
 }
 
-/********************************************************************************
-TODO
-void apf_motion_planner::odomCallback(const nav_msgs::Odometry latest_odom) {
-
-    tf::Pose pose;
-	tf::poseMsgToTF(latest_odom.pose.pose, pose);
-	theta = tf::getYaw(pose.getRotation()) * 180 / PI;
-
-	//ROS_INFO("Relative rotation: %f", theta);
-}
-*******************************************************************************/
-
-/*******************************************************************
-TODO
-void apf_motion_planner::get_MARRtino_pose(tf::TransformListener* transform_listener))
-{
-
-}
-*************************************************************************/
-
 void apf_motion_planner::init()
 {
     pub_velocity_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
-
-    //sub_odom_ = nh_.subscribe<nav_msgs::Odometry>("/odom", 100, apf_motion_planner::odomCallback);
 
     sub_obstacle_mapper_ = nh_.subscribe<std_msgs::Float64MultiArray>("/camera/obstacles2D", 1, &apf_motion_planner::apfCallback, this);
 }

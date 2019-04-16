@@ -3,10 +3,12 @@
 #include <iostream>
 #include <ros/ros.h>
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <opencv2/opencv.hpp>
 #include <pcl/console/parse.h>
+#include <pcl_ros/transforms.h>
 #include <opencv2/core/core.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core/eigen.hpp>
@@ -26,6 +28,13 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/visualization/point_cloud_color_handlers.h>
+
+// ROS/tf libraries
+#include <tf2_eigen/tf2_eigen.h>
+#include <tf/transform_listener.h>
+#include <tf/transform_datatypes.h>
+#include <tf_conversions/tf_eigen.h>
+#include <tf/transform_broadcaster.h>
 
 
 #define PI 3.14159265
@@ -59,5 +68,16 @@ protected:
     ros::Subscriber sub_;
 
     ros::Publisher  pub_;
+
+    //creating a listener member's class variable in order to be persistent during run-time;
+    tf::TransformListener listener_;
+
+    tf::StampedTransform point_cloud_tranform_;
+
+    // robot's origin w.r.t. "base_link"
+    //tf::Stamped<tf::Pose> robot_pose;
+
+    // robot's origin w.r.t. "odom"
+    //tf::Stamped<tf::Pose> tf_robot_odom_pose;
 
 };

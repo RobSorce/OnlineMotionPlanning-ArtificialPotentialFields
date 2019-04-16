@@ -77,16 +77,6 @@ protected:
 
     ros::Subscriber sub_obstacle_mapper_; //Subscribes to (/obstacles_mapper_2d)
 
-    //ros::Subscriber sub_odom_;            //Subscribes to (/odom)
-
-    //tf::TransformListener listener_;
-
-    // robot's origin w.r.t. "base_link"
-	//tf::Stamped<tf::Pose> robot_pose;
-
-	// robot's origin w.r.t. "odom"
-	//tf::Stamped<tf::Pose> tf_robot_odom_pose;
-
     geometry_msgs::Twist vel_;
 
 };
